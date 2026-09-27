@@ -41,7 +41,7 @@ tool.zip
 | `name` | 工具名（必填） |
 | `description` | 描述（管理页作为"卡组简介"展示，最多 3 行） |
 | `lang` | 界面语言（zh/en） |
-| `icon` | 图标（zip 内相对路径，如 `assets/icon.png`；无则管理页用默认龙 `fa-dragon`） |
+| `icon` | 图标（zip 内相对路径，如 `assets/icon.png`）。**不写也可**：上传/重新上传工具时会自动检测 `assets/icon.png` / `.svg` / `.jpg` / `.webp`（任选其一）作为卡组图标，替换图标文件重传即更新；都没有则用默认龙 `fa-dragon` |
 | `fields` | **工具期望的数据字段**——用于字段匹配校验（卡组数据缺字段会提示） |
 | `trackedActions` | 你会用 `cardAPI.track()` 记录的动作名（**≤5 个**） |
 
