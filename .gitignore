@@ -1,0 +1,17 @@
+# 小工具源码目录（本目录不是 git 仓库；这份规则是为将来 git init 准备的）
+
+# 打包产物
+dist/
+
+# 可再生产物（截图 / 一次性 html / 预览工程）
+_preview/
+
+# ⛔ 第三方音素录音，不进仓库
+#    来源 soundsamerican.net/data-ipa-chart/phonemes.mp3（一个 51 秒 sprite 切出的 48 段）
+#    授权 CC BY-NC-ND 4.0：可自用，**不可再分发 / 不可商用 / 不可改编**
+#    所以：源码仓库里没有它，工具 zip 里有（zip 只在你本机导入/交付，不进 GitHub）。
+#    缺了这个目录时工具不会崩，只是音素发音退化成读例词。
+**/assets/phonemes/
+
+# 系统文件
+.DS_Store

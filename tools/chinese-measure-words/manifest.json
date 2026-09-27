@@ -1,0 +1,25 @@
+{
+  "name": "汉语量词 · Measure Words",
+  "description": "195 个常用量词按七类分组（个体/集合/容器/度量/时间/动作/类别），每个量词带 HSK 等级、英文用法说明、典型搭配（一+量+名）与中英例句。顶栏切换「分类速查表 / 卡片」两种视图，点格子跳卡；搭配与例句可点读；按类筛选；标记/收藏、三套皮肤。面向对外汉语学习者。",
+  "lang": "zh",
+  "fields": [
+    "type",
+    "nameZh",
+    "nameEn",
+    "mw",
+    "pinyin",
+    "category",
+    "level",
+    "usage",
+    "collocations",
+    "example",
+    "exampleEn"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "word_play",
+    "word_mark",
+    "favorite_toggle"
+  ],
+  "cardsJson": "../dragoncard/default_cards/chinese_measure_words/cards.json"
+}

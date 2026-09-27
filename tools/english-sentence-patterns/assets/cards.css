@@ -1,0 +1,371 @@
+/* ==========================================================================
+   英语五种基本句型 · 卡面（.sp-*）
+   ==========================================================================
+   照搬模板 34「英语句子成分与五种基本句型」（deck 21 原来用的那张，已从库里导出校对）：
+
+     浅灰蓝底 #f7f9fc / 卡头浅灰条 / 圆角 14px
+     五种卡型各一个徽章色（总览 sky / 句型 blue / 成分 green / 辨析 violet / 检验 rose）
+     九个句子成分各一色，例句里的词按角色着色 + 下划底线
+     中文讲解 = 蓝左条，英文解释 = 紫左条，检验规则 = 青左条
+
+   ⚠️ 与原模板的四处**有意差异**（都是为了对上工具这一代的规矩，不改变卡上内容）：
+     1. 所有尺寸走 calc(Npx * var(--kt)) —— 原模板是死 px，工具的字号滑杆拉不动它。
+     2. 成分色从**内联 style 改成类**（.r-S/.r-V/…）—— 内联 style 会把皮肤挡死，
+        深色皮肤里 #3b82f6 / #8b5cf6 这类偏暗的色会糊在深紫底上。类名可以在
+        皮肤里整体提亮（见第 2 节），这是原模板做不到的。
+     3. 动作按钮改成**纯图标 + hover 悬浮标签**，和音标拼读 / 西方典故 / 三十六计一致
+        （原模板本来就是纯图标，只是用自己的 ::after 提示，这里改用工具的全局 tooltip）。
+     4. 加了分类彩皮肤；原模板只有浅色一种，深色是挂在 body.dark-mode 上的宿主开关。
+
+   动作栏仍在**卡头右侧**（原模板的位置），不是卡片底部右轨。
+   ========================================================================== */
+
+/* ===== 1. 五种卡型的颜色（类型来自数据里的 type） ===== */
+.sp-t-overview  { --cat: #0ea5e9; }
+.sp-t-pattern   { --cat: #3b82f6; }
+.sp-t-component { --cat: #22c55e; }
+.sp-t-contrast  { --cat: #8b5cf6; }
+.sp-t-check     { --cat: #e11d48; }
+html.skin-glass .sp-t-overview  { --cat: #38bdf8; }
+html.skin-glass .sp-t-pattern   { --cat: #6aa6ff; }
+html.skin-glass .sp-t-component { --cat: #4ade80; }
+html.skin-glass .sp-t-contrast  { --cat: #b18cff; }
+html.skin-glass .sp-t-check     { --cat: #fb7185; }
+
+/* ===== 2. 皮肤 token（默认 = 模板 34 的浅色） ===== */
+.sp-root {
+    /* 句子成分的角色色：JS 只输出 .r-S 这类类名，颜色全部收在这里 */
+    --r-S: #3b82f6;
+    --r-V: #22c55e;
+    --r-P: #8b5cf6;
+    --r-O: #f59e0b;
+    --r-IO: #fbbf24;
+    --r-DO: #f59e0b;
+    --r-OC: #ec4899;
+    --r-A: #94a3b8;
+    --r-Attr: #94a3b8;
+    --r: #64748b;               /* 兜底（正常情况下每个 token 都带角色） */
+
+    --sp-blue: #3b82f6;         /* 中文讲解的左条 */
+    --sp-violet: #8b5cf6;       /* 英文解释的左条 */
+    --sp-teal: #14b8a6;         /* 检验规则的左条 */
+    --sp-teal-bg: #eef7f7;
+    --sp-cat-ink: #ffffff;      /* 徽章上的字：颜色浅了就翻成深字 */
+}
+html.skin-glass .sp-root {
+    --r-S: #6aa6ff;
+    --r-V: #4ade80;
+    --r-P: #b18cff;
+    --r-O: #fbbf24;
+    --r-IO: #fcd34d;
+    --r-DO: #fbbf24;
+    --r-OC: #f472b6;
+    --r-A: #a8b3c4;
+    --r-Attr: #a8b3c4;
+    --r: #9c94b0;
+
+    --sp-blue: #6aa6ff;
+    --sp-violet: #b18cff;
+    --sp-teal: #5eead4;
+    --sp-teal-bg: rgba(94, 234, 212, .10);
+    --sp-cat-ink: #171226;      /* 提亮后的类型色是浅色，徽章改深字 */
+}
+html.skin-category .sp-root { --sp-teal-bg: #f1f8f7; }
+
+/* 分类彩：类型色就是主色。--cat 声明在 .sp-root 自己身上（.sp-t-*），
+   所以读它的规则也必须落在 .sp-root 自己身上 —— var() 在声明元素上就解析完了。 */
+html.skin-category .sp-root {
+    border-color: var(--cat);
+    border-left-width: 5px;
+}
+html.skin-category .sp-act:hover { border-color: var(--cat); }
+
+/* ===== 3. 卡本体 ===== */
+.sp-root {
+    background: var(--card-bg);
+    color: var(--card-ink);
+    border: 1px solid var(--card-line);
+    border-radius: calc(14px * var(--kt));
+    box-shadow: 0 1px 3px rgba(30, 41, 59, .06);
+    overflow: hidden;
+}
+html.skin-glass .sp-root { backdrop-filter: blur(14px) saturate(140%); }
+
+/* ===== 4. 卡头：类型徽章 + 卡名 + 动作栏 ===== */
+.sp-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(12px * var(--kt));
+    padding: calc(10px * var(--kt)) calc(16px * var(--kt));
+    border-bottom: 1px solid var(--fml-line);
+    background: var(--fml-bg);
+}
+.sp-bar-left {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(8px * var(--kt));
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.sp-badge {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    font-size: calc(11px * var(--kt));
+    font-weight: 700;
+    letter-spacing: .5px;
+    padding: calc(3px * var(--kt)) calc(9px * var(--kt));
+    border-radius: 999px;
+    background: var(--cat);
+    color: var(--sp-cat-ink);
+    white-space: nowrap;
+    line-height: 1.5;
+}
+.sp-label {
+    font-size: calc(13px * var(--kt));
+    font-weight: 600;
+    color: var(--ink2);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 4.1 动作栏（卡头右侧，纯图标 + 悬浮标签） */
+.sp-acts { display: flex; gap: calc(7px * var(--kt)); flex: 0 0 auto; }
+.sp-act {
+    width: calc(38px * var(--kt));
+    height: calc(38px * var(--kt));
+    border-radius: 999px;
+    border: 1px solid var(--acts-line);
+    background: var(--acts-bg);
+    color: var(--muted);
+    font-size: calc(15px * var(--kt));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+    touch-action: manipulation;
+}
+.sp-act:hover { background: var(--act-hover); color: var(--accent); }
+.sp-act:active { transform: scale(.92); }
+.sp-act.act-mark.is-active { color: var(--gold); border-color: var(--gold); }
+.sp-act.act-fav.is-active { color: var(--rose); border-color: var(--rose); }
+
+/* ===== 5. 卡身 ===== */
+.sp-body { padding: calc(20px * var(--kt)) calc(22px * var(--kt)); }
+
+/* 5.1 例句里的成分 token（按角色着色 + 下划底线） */
+.sp-tok {
+    padding: 0 calc(2px * var(--kt));
+    border-radius: calc(3px * var(--kt));
+    font-weight: 700;
+    color: var(--r);
+    border-bottom: calc(3px * var(--kt)) solid var(--r);
+}
+.r-S { --r: var(--r-S); }
+.r-V { --r: var(--r-V); }
+.r-P { --r: var(--r-P); }
+.r-O { --r: var(--r-O); }
+.r-IO { --r: var(--r-IO); }
+.r-DO { --r: var(--r-DO); }
+.r-OC { --r: var(--r-OC); }
+.r-A { --r: var(--r-A); }
+.r-Attr { --r: var(--r-Attr); }
+.sp-content { display: block; }
+
+/* 5.2 句型公式（S + V + O 那种色块串） */
+.sp-formula-row {
+    display: flex;
+    align-items: center;
+    gap: calc(12px * var(--kt));
+    flex-wrap: wrap;
+    margin-bottom: calc(6px * var(--kt));
+}
+.sp-formula { display: inline-flex; align-items: center; gap: calc(5px * var(--kt)); flex-wrap: wrap; }
+.sp-part {
+    font-size: calc(21px * var(--kt));
+    font-weight: 800;
+    padding: calc(5px * var(--kt)) calc(12px * var(--kt));
+    border-radius: calc(8px * var(--kt));
+    color: #fff;
+    background: var(--r);
+    white-space: nowrap;
+}
+.sp-plus { font-size: calc(21px * var(--kt)); font-weight: 700; color: var(--muted); }
+
+/* 5.3 卡名（五种卡型原本各有字号，改成修饰类，不再写内联 style） */
+.sp-name { font-size: calc(26px * var(--kt)); font-weight: 800; color: var(--strong); letter-spacing: -.4px; }
+.sp-name-xl { font-size: calc(30px * var(--kt)); }
+.sp-name-lg { font-size: calc(32px * var(--kt)); }
+.sp-name-md { font-size: calc(21px * var(--kt)); }
+.sp-name-sm { font-size: calc(28px * var(--kt)); }
+.sp-name-en { font-size: calc(14px * var(--kt)); color: var(--muted); margin-bottom: calc(14px * var(--kt)); letter-spacing: .3px; }
+
+/* 5.4 小节标题 */
+.sp-sec {
+    font-size: calc(11px * var(--kt));
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: calc(7px * var(--kt));
+}
+.sp-sec-gap { margin-top: calc(16px * var(--kt)); }
+
+/* 5.5 成分拆解（圆点 + 词 + 成分名） */
+.sp-breakdown { display: flex; flex-direction: column; gap: calc(5px * var(--kt)); margin-bottom: calc(14px * var(--kt)); }
+.sp-row { display: flex; align-items: center; gap: calc(9px * var(--kt)); font-size: calc(15px * var(--kt)); }
+.sp-dot { width: calc(10px * var(--kt)); height: calc(10px * var(--kt)); border-radius: 50%; flex: 0 0 auto; background: var(--r); }
+.sp-role { font-size: calc(12.5px * var(--kt)); color: var(--muted); }
+
+/* 5.6 讲解块：中文蓝条 / 英文紫条 / 检验规则青条 */
+.sp-note {
+    font-size: calc(14px * var(--kt));
+    color: var(--ink2);
+    line-height: 1.65;
+    background: var(--fml-bg);
+    border-left: calc(3px * var(--kt)) solid var(--sp-blue);
+    border-radius: 0 calc(8px * var(--kt)) calc(8px * var(--kt)) 0;
+    padding: calc(9px * var(--kt)) calc(12px * var(--kt));
+}
+.sp-note-en {
+    font-size: calc(14px * var(--kt));
+    color: var(--ink2);
+    line-height: 1.65;
+    background: var(--alt-bg);
+    border-left: calc(3px * var(--kt)) solid var(--sp-violet);
+    border-radius: 0 calc(8px * var(--kt)) calc(8px * var(--kt)) 0;
+    padding: calc(9px * var(--kt)) calc(12px * var(--kt));
+    font-style: italic;
+}
+.sp-note + .sp-note-en { margin-top: calc(8px * var(--kt)); }
+.sp-note-top { margin-top: calc(14px * var(--kt)); }
+.sp-trans { margin-top: calc(12px * var(--kt)); font-size: calc(14px * var(--kt)); color: var(--muted); }
+.sp-trans b { color: var(--ink2); }
+
+/* ===== 6. 卡型 ① 总览 ===== */
+.sp-overview { display: flex; flex-direction: column; margin-bottom: calc(14px * var(--kt)); }
+.sp-ov-item { display: flex; align-items: flex-start; gap: calc(11px * var(--kt)); padding: calc(8px * var(--kt)) 0; }
+.sp-ov-item + .sp-ov-item { border-top: 1px dashed var(--fml-line); }
+.sp-ov-num {
+    flex: 0 0 auto;
+    width: calc(22px * var(--kt));
+    height: calc(22px * var(--kt));
+    border-radius: 50%;
+    background: var(--fml-bg);
+    border: 1px solid var(--fml-line);
+    color: var(--ink2);
+    font-size: calc(12px * var(--kt));
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: calc(4px * var(--kt));
+}
+.sp-ov-body { flex: 1; min-width: 0; }
+.sp-ov-head { display: flex; align-items: center; gap: calc(10px * var(--kt)); flex-wrap: wrap; margin-bottom: calc(3px * var(--kt)); }
+.sp-overview .sp-part { font-size: calc(14px * var(--kt)); padding: calc(3px * var(--kt)) calc(8px * var(--kt)); }
+.sp-overview .sp-plus { font-size: calc(14px * var(--kt)); }
+.sp-ov-name { font-size: calc(15px * var(--kt)); font-weight: 700; color: var(--strong); }
+.sp-ov-sentence { font-size: calc(13.5px * var(--kt)); color: var(--muted); }
+
+/* ===== 7. 卡型 ② 句型（主角是例句） ===== */
+.sp-sentence {
+    font-size: calc(34px * var(--kt));
+    font-weight: 800;
+    color: var(--strong);
+    line-height: 1.4;
+    letter-spacing: -.4px;
+    margin-bottom: calc(14px * var(--kt));
+}
+/* 公式行里的卡名跟着公式走，别用 26px 把行撑高 */
+.sp-formula-row .sp-name { font-size: calc(26px * var(--kt)); }
+
+/* ===== 8. 卡型 ③ 成分 ===== */
+.sp-example {
+    font-size: calc(22px * var(--kt));
+    font-weight: 700;
+    color: var(--strong);
+    line-height: 1.5;
+    margin-bottom: calc(12px * var(--kt));
+}
+
+/* ===== 9. 卡型 ④ 辨析（两句对照） ===== */
+.sp-contrast { display: flex; flex-direction: column; gap: calc(16px * var(--kt)); }
+.sp-c-item { min-width: 0; }
+.sp-c-tag {
+    display: inline-block;
+    font-size: calc(10.5px * var(--kt));
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: var(--muted);
+    margin-bottom: calc(5px * var(--kt));
+}
+.sp-c-sentence {
+    font-size: calc(21px * var(--kt));
+    font-weight: 800;
+    color: var(--strong);
+    line-height: 1.45;
+    letter-spacing: -.2px;
+    margin-bottom: calc(6px * var(--kt));
+}
+
+/* ===== 10. 卡型 ⑤ 检验（换成 be 试试） ===== */
+.sp-rule {
+    font-size: calc(14px * var(--kt));
+    color: var(--ink2);
+    line-height: 1.7;
+    background: var(--sp-teal-bg);
+    border-left: calc(3px * var(--kt)) solid var(--sp-teal);
+    border-radius: 0 calc(8px * var(--kt)) calc(8px * var(--kt)) 0;
+    padding: calc(9px * var(--kt)) calc(13px * var(--kt));
+    margin-bottom: calc(14px * var(--kt));
+}
+.sp-rule b { color: var(--sp-teal); }
+.sp-checks { display: flex; flex-direction: column; gap: calc(10px * var(--kt)); margin-bottom: calc(14px * var(--kt)); }
+.sp-check { background: var(--chip-bg); border: 1px solid var(--chip-line); border-radius: calc(10px * var(--kt)); padding: calc(10px * var(--kt)) calc(13px * var(--kt)); }
+.sp-chk-top { display: flex; align-items: center; gap: calc(8px * var(--kt)); flex-wrap: wrap; margin-bottom: calc(7px * var(--kt)); }
+.sp-chk-before { font-size: calc(16px * var(--kt)); font-weight: 700; color: var(--muted); }
+.sp-chk-arrow {
+    font-size: calc(11px * var(--kt));
+    font-weight: 700;
+    color: var(--sp-teal);
+    background: var(--sp-teal-bg);
+    border: 1px solid var(--sp-teal);
+    border-radius: calc(6px * var(--kt));
+    padding: calc(2px * var(--kt)) calc(7px * var(--kt));
+    white-space: nowrap;
+}
+.sp-chk-after { font-size: calc(17px * var(--kt)); font-weight: 800; color: var(--strong); }
+.sp-chk-mark {
+    font-size: calc(11.5px * var(--kt));
+    font-weight: 700;
+    padding: calc(3px * var(--kt)) calc(8px * var(--kt));
+    border-radius: 999px;
+    color: #fff;
+    background: var(--sp-teal);
+    white-space: nowrap;
+}
+.sp-chk-mark.no { background: var(--muted); }
+.sp-chk-verdict { display: flex; align-items: center; gap: calc(8px * var(--kt)); flex-wrap: wrap; font-size: calc(13px * var(--kt)); color: var(--ink2); }
+.sp-check .sp-part { font-size: calc(13px * var(--kt)); padding: calc(3px * var(--kt)) calc(8px * var(--kt)); }
+.sp-check .sp-plus { font-size: calc(13px * var(--kt)); }
+.sp-chk-name { font-weight: 800; font-size: calc(15px * var(--kt)); color: var(--strong); }
+.sp-chk-why { color: var(--muted); font-size: calc(12.5px * var(--kt)); }
+
+/* ===== 11. 单卡模式：卡在舞台里独占一行 ===== */
+.single-card-stage .sp-root { box-shadow: 0 12px 34px rgba(30, 41, 59, .16); }
+html.skin-glass .single-card-stage .sp-root { box-shadow: 0 16px 44px rgba(0, 0, 0, .5); }
+
+/* ===== 12. 窄屏：卡头折成两行 =====
+   420px + 145% 时，「总览 / 辨析」徽章 + 三个 38px 按钮挤在同一行，
+   留给卡名的宽度只剩五六十像素 ⇒ 省略号把「五种基本句型」压成「五.」。
+   卡名(body 里那个大标题)不丢信息，但看着像坏了；让动作栏退到第二行即可。 */
+@media (max-width: 520px) {
+    .sp-bar { flex-wrap: wrap; }
+    .sp-bar-left { flex: 1 1 100%; }
+    .sp-acts { margin-left: auto; }
+}

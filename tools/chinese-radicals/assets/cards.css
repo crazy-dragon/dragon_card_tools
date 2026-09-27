@@ -1,0 +1,505 @@
+/* ==========================================================================
+   卡面：汉字部首 214（.zr-*）—— 两种视图共用一份数据
+   --------------------------------------------------------------------------
+   chart 部首表   按笔画分 5 档（1-2 / 3-4 / 5-6 / 7-9 / 10+），每档一个分组，
+                  组内按康煕序号排网格。点格子 = 读部首名 + 跳到那张卡。
+   card  卡片     字形 / 变形 / 名称 / 中英义类 / 3 个例字（例词带 HSK 等级）/ 中英口诀。
+
+   类名从原模板搬来（.zr-root / .zr-no / .zr-chip / .zr-big / .zr-varmini /
+   .zr-name / .zr-mean / .zr-ex / .zr-excell / .zr-strokebtn），另加
+   .zr-band / .zr-grid 那套表格样式。改动点：
+     · 卡片字号 ×var(--kt)（--k=1.25 见 app.css）；**表格字号只吃工具字号滑杆
+       （--card-font-scale），不吃 --k** —— --k 是"部首字当主角"的放大倍数，
+       套到十几列一行的网格上会撑爆
+     · 动作按钮钉右上角右轨 .dc-acts（几何与别的工具逐字相同）
+
+   配色 = 笔画分档（--cat）。这是数据里 _col 字段原本的分组依据
+   （1-2 蓝 / 3-4 青 / 5-6 紫 / 7-9 橙 / 10+ 灰），所以部首表上就是 5 条色带，
+   一眼看出"同色 = 笔画数接近"，而这正是查字典时按笔画检字的依据。
+   ========================================================================== */
+
+/* ===== 1. 笔画分档色（每套皮肤一套） ===== */
+.bd-12 { --cat: #2f6ac0; }
+.bd-34 { --cat: #0e8f84; }
+.bd-56 { --cat: #7c44b4; }
+.bd-79 { --cat: #c2572d; }
+.bd-10 { --cat: #64748b; }
+html.skin-glass .bd-12 { --cat: #7fa9e8; }
+html.skin-glass .bd-34 { --cat: #5fc9bd; }
+html.skin-glass .bd-56 { --cat: #c19bf0; }
+html.skin-glass .bd-79 { --cat: #e08a5f; }
+html.skin-glass .bd-10 { --cat: #9c94b0; }
+
+/* 汉字字形用衬线字库（部首是"字"，宋体比无衬线更像字典） */
+.zr-big, .c-glyph, .zr-exchar, .zr-varmini, .zr-intro-zh {
+    font-family: "Songti SC", "STSong", "SimSun", "PingFang SC", serif;
+}
+
+/* ==========================================================================
+   2. 卡片视图
+   ========================================================================== */
+.zr-root {
+    position: relative;
+    box-sizing: border-box;
+    border-radius: 18px;
+    /* 右 158px = 右轨留白，固定不缩放 */
+    padding: calc(15px * var(--kt)) 158px calc(14px * var(--kt)) calc(20px * var(--kt));
+    margin-bottom: 16px;
+    color: var(--card-ink);
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: 4px solid var(--cat);
+    box-shadow: 0 6px 18px rgba(93, 78, 46, .07);
+    min-height: calc(250px * var(--kt));
+    display: flex;
+    flex-direction: column;
+}
+html.skin-glass .zr-root { backdrop-filter: blur(14px) saturate(140%); }
+
+/* 封面卡（type=intro）：卡片视图最前面那张 */
+.zr-intro {
+    border-top-color: var(--accent);
+    padding: calc(26px * var(--kt)) calc(20px * var(--kt));
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 0;
+}
+.zr-intro-zh {
+    font-size: calc(40px * var(--kt));
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: var(--strong);
+}
+.zr-intro-en {
+    margin-top: calc(6px * var(--kt));
+    font-size: calc(14px * var(--kt));
+    font-weight: 600;
+    letter-spacing: .06em;
+    color: var(--muted);
+}
+
+/* 动作轨道（与别的工具逐字相同：右上角，所有卡同一个 x） */
+.dc-acts {
+    position: absolute;
+    right: 14px;
+    top: 11px;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 13px;
+    background: var(--acts-bg);
+    border: 1px solid var(--acts-line);
+    z-index: 2;
+}
+.dc-acts button {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.dc-acts button:hover { background: var(--act-hover); color: var(--accent); }
+.dc-acts button:active { transform: scale(.94); }
+.dc-acts button.act-mark.is-active { color: var(--gold); }
+.dc-acts button.act-fav.is-active { color: var(--rose); }
+
+/* 顶行：序号 / 笔画 / 核心 / 分档 */
+.dc-top {
+    display: flex;
+    align-items: center;
+    gap: calc(7px * var(--kt));
+    margin-bottom: calc(8px * var(--kt));
+    flex-wrap: wrap;
+}
+.zr-no {
+    display: inline-flex;
+    align-items: center;
+    font-size: calc(12px * var(--kt));
+    font-weight: 800;
+    padding: calc(4px * var(--kt)) calc(11px * var(--kt));
+    border-radius: 999px;
+    background: var(--cat);
+    color: #fff;
+    white-space: nowrap;
+}
+.zr-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: calc(12px * var(--kt));
+    font-weight: 700;
+    padding: calc(4px * var(--kt)) calc(10px * var(--kt));
+    border-radius: 999px;
+    background: var(--tag-soft);
+    color: var(--tag-soft-fg);
+    border: 1px solid var(--tag-soft-line);
+    white-space: nowrap;
+}
+.zr-chip.zr-core {
+    color: var(--gold);
+    border-color: color-mix(in srgb, var(--gold) 40%, transparent);
+}
+.zr-chip.zr-band { color: var(--cat); border-color: color-mix(in srgb, var(--cat) 35%, transparent); }
+
+/* 字形区：大字 + 变形 + 名称 + 笔顺按钮 */
+.zr-glyph {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: calc(12px * var(--kt));
+    margin: calc(2px * var(--kt)) 0 calc(4px * var(--kt));
+}
+.zr-big {
+    font-size: calc(76px * var(--kt));
+    line-height: 1.05;
+    font-weight: 800;
+    color: var(--strong);
+    cursor: pointer;
+    transition: color .15s;
+}
+.zr-big:hover { color: var(--cat); }
+.zr-varmini {
+    font-size: calc(24px * var(--kt));
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: calc(4px * var(--kt));
+}
+.zr-name {
+    font-size: calc(19px * var(--kt));
+    font-weight: 700;
+    color: var(--ink2);
+    margin-left: auto;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: calc(7px * var(--kt));
+}
+.zr-name .zr-py { font-size: calc(14px * var(--kt)); font-weight: 500; color: var(--muted); }
+.zr-name .zr-en { font-size: calc(13px * var(--kt)); font-weight: 500; color: var(--muted); font-style: italic; }
+.zr-strokebig {
+    margin-left: auto;
+    border: 1px solid var(--card-line);
+    background: var(--btn-bg);
+    color: var(--muted);
+    font-size: calc(12px * var(--kt));
+    font-weight: 700;
+    padding: calc(5px * var(--kt)) calc(12px * var(--kt));
+    border-radius: 999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: calc(5px * var(--kt));
+    transition: background .15s, color .15s, border-color .15s;
+}
+.zr-strokebig:hover { background: var(--cat); border-color: var(--cat); color: #fff; }
+
+/* 义类（中 + 英） */
+.zr-mean {
+    margin-top: calc(9px * var(--kt));
+    padding-left: calc(12px * var(--kt));
+    border-left: 3px solid var(--cat);
+    font-size: calc(16px * var(--kt));
+    line-height: 1.6;
+    color: var(--body-ink);
+}
+.zr-men {
+    display: block;
+    margin-top: calc(2px * var(--kt));
+    font-size: calc(12.5px * var(--kt));
+    color: var(--muted);
+    font-style: italic;
+}
+
+/* 例字 3 格 */
+.zr-exsec {
+    margin-top: calc(12px * var(--kt));
+    font-size: calc(11.5px * var(--kt));
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: var(--muted);
+}
+.zr-ex {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: calc(8px * var(--kt));
+    margin-top: calc(6px * var(--kt));
+}
+.zr-excell {
+    position: relative;
+    background: var(--btn-bg);
+    border: 1px solid var(--card-line);
+    border-radius: calc(11px * var(--kt));
+    padding: calc(9px * var(--kt)) calc(6px * var(--kt)) calc(8px * var(--kt));
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: transform .1s, border-color .15s;
+    overflow: hidden;
+}
+.zr-excell:hover { border-color: var(--cat); }
+.zr-excell:active { transform: scale(.97); }
+.zr-exchar {
+    font-size: calc(28px * var(--kt));
+    line-height: 1.2;
+    font-weight: 700;
+    color: var(--strong);
+}
+.zr-exp {
+    font-size: calc(11.5px * var(--kt));
+    color: var(--muted);
+    margin-top: calc(2px * var(--kt));
+}
+.zr-exen {
+    font-size: calc(10.5px * var(--kt));
+    color: var(--muted);
+    opacity: .8;
+    margin-top: calc(1px * var(--kt));
+}
+.zr-exw {
+    margin-top: calc(4px * var(--kt));
+    font-size: calc(11px * var(--kt));
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.zr-hlv {
+    color: var(--cat);
+    font-weight: 800;
+    font-size: calc(9.5px * var(--kt));
+    letter-spacing: .3px;
+}
+.zr-exword {
+    color: var(--body-ink);
+    font-weight: 700;
+    cursor: pointer;
+    border-bottom: 1px dashed transparent;
+}
+.zr-exword:hover { border-bottom-color: var(--cat); color: var(--cat); }
+
+/* 例字格右上角的迷你笔顺按钮（点字本体=读字，点这里=笔顺，两个入口分开） */
+.zr-strokebtn {
+    position: absolute;
+    top: calc(3px * var(--kt));
+    right: calc(3px * var(--kt));
+    border: 0;
+    background: rgba(0, 0, 0, .05);
+    color: var(--muted);
+    font-size: calc(9.5px * var(--kt));
+    font-weight: 700;
+    line-height: 1;
+    padding: calc(4px * var(--kt)) calc(6px * var(--kt));
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.zr-strokebtn:hover { background: var(--cat); color: #fff; }
+
+/* 口诀 */
+.zr-tip {
+    margin-top: auto;
+    padding-top: calc(10px * var(--kt));
+    border-top: 1px dashed var(--card-line);
+    font-size: calc(13px * var(--kt));
+    line-height: 1.55;
+    color: var(--body-ink);
+}
+.zr-tip i { color: var(--gold); margin-right: calc(5px * var(--kt)); }
+.zr-tipen {
+    display: block;
+    margin-top: calc(2px * var(--kt));
+    font-size: calc(11.5px * var(--kt));
+    color: var(--muted);
+    font-style: italic;
+}
+
+/* 跳转高亮（从部首表点过来时闪一下） */
+.zr-flash { animation: zrFlash 1.4s ease; }
+@keyframes zrFlash {
+    0%, 100% { box-shadow: 0 6px 18px rgba(93, 78, 46, .07); }
+    15%, 55% { box-shadow: 0 0 0 3px var(--cat), 0 10px 26px rgba(93, 78, 46, .18); }
+}
+
+/* ==========================================================================
+   3. 部首表视图
+   ⚠️ 字号只吃 --card-font-scale（工具字号滑杆），不吃 --k。
+   ========================================================================== */
+.zr-band { margin-bottom: calc(18px * var(--card-font-scale, 1)); }
+.zr-band-head {
+    display: flex;
+    align-items: baseline;
+    gap: calc(9px * var(--card-font-scale, 1));
+    padding: 0 calc(2px * var(--card-font-scale, 1)) calc(7px * var(--card-font-scale, 1));
+    border-bottom: 2px solid var(--cat);
+    margin-bottom: calc(9px * var(--card-font-scale, 1));
+}
+.zr-band-zh {
+    font-size: calc(16px * var(--card-font-scale, 1));
+    font-weight: 800;
+    color: var(--cat);
+}
+.zr-band-en {
+    font-size: calc(11px * var(--card-font-scale, 1));
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: .4px;
+}
+.zr-band-n {
+    margin-left: auto;
+    font-size: calc(11px * var(--card-font-scale, 1));
+    font-weight: 700;
+    color: var(--muted);
+}
+
+.zr-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(calc(78px * var(--card-font-scale, 1)), 1fr));
+    gap: calc(7px * var(--card-font-scale, 1));
+}
+
+.c-cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(1px * var(--card-font-scale, 1));
+    padding: calc(7px * var(--card-font-scale, 1)) calc(4px * var(--card-font-scale, 1)) calc(6px * var(--card-font-scale, 1));
+    border-radius: calc(11px * var(--card-font-scale, 1));
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: 3px solid var(--cat);
+    color: var(--card-ink);
+    cursor: pointer;
+    user-select: none;
+    overflow: hidden;
+    transition: transform .12s ease, box-shadow .15s ease;
+}
+.c-cell:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(93, 78, 46, .12); }
+.c-cell:active { transform: scale(.97); }
+/* 核心部首加一圈内描边，和「只看核心」筛选呼应 */
+.c-cell.is-core::after {
+    content: '';
+    position: absolute;
+    inset: calc(2px * var(--card-font-scale, 1));
+    border-radius: calc(9px * var(--card-font-scale, 1));
+    border: 1.5px solid color-mix(in srgb, var(--gold) 55%, transparent);
+    pointer-events: none;
+}
+.c-glyph {
+    font-size: calc(34px * var(--card-font-scale, 1));
+    line-height: 1.1;
+    font-weight: 800;
+    color: var(--strong);
+}
+.c-no {
+    font-size: calc(9.5px * var(--card-font-scale, 1));
+    font-weight: 800;
+    color: #fff;
+    background: var(--cat);
+    border-radius: 999px;
+    padding: calc(1px * var(--card-font-scale, 1)) calc(6px * var(--card-font-scale, 1));
+    line-height: 1.5;
+}
+.c-name {
+    max-width: 100%;
+    font-size: calc(10.5px * var(--card-font-scale, 1));
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.c-star {
+    position: absolute;
+    top: calc(4px * var(--card-font-scale, 1));
+    right: calc(5px * var(--card-font-scale, 1));
+    font-size: calc(10px * var(--card-font-scale, 1));
+    color: var(--gold);
+    pointer-events: none;
+}
+.c-fav {
+    position: absolute;
+    top: calc(4px * var(--card-font-scale, 1));
+    left: calc(5px * var(--card-font-scale, 1));
+    font-size: calc(10px * var(--card-font-scale, 1));
+    color: var(--rose);
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   4. 笔顺弹层（Hanzi Writer）
+   ========================================================================== */
+.zr-sov {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 18, 24, .55);
+    backdrop-filter: blur(2px);
+}
+.zr-sov.on { display: flex; }
+.zr-sov-panel {
+    background: var(--dropdown-bg);
+    border-radius: 16px;
+    padding: 18px 18px 14px;
+    max-width: 92vw;
+    text-align: center;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .25);
+}
+.zr-sov-char {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--card-ink);
+    margin-bottom: 8px;
+}
+.zr-sov-stage { width: min(250px, 68vw); height: min(250px, 68vw); margin: 0 auto; }
+.zr-sov-stage svg { display: block; }
+.zr-sov-msg { font-size: 12.5px; color: var(--muted); margin-top: 8px; min-height: 17px; }
+.zr-sov-btns { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+.zr-sov-btns button {
+    border: 1px solid var(--card-line);
+    background: var(--btn-bg);
+    color: var(--card-ink);
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+}
+.zr-sov-btns button:hover { background: var(--act-hover); }
+
+/* ==========================================================================
+   5. 分类彩皮肤：卡底与格子跟着分档色淡染
+   （必须写在卡片内选择器上 —— var() 在声明它的元素上就替换完了） */
+html.skin-category .zr-root {
+    background: color-mix(in srgb, var(--cat) 7%, #fff);
+    border-color: color-mix(in srgb, var(--cat) 22%, #fff);
+    border-top-color: var(--cat);
+}
+html.skin-category .c-cell {
+    background: color-mix(in srgb, var(--cat) 6%, #fff);
+    border-color: color-mix(in srgb, var(--cat) 20%, #fff);
+    border-top-color: var(--cat);
+}
+@supports not (background: color-mix(in srgb, red 10%, white)) {
+    html.skin-category .zr-root { background: #f4f6f9; border-color: #dfe3e9; }
+    html.skin-category .c-cell { background: #f8fafc; border-color: #dfe3e9; }
+}
+
+/* 窄屏：右轨留白收掉，名字落到下一行 */
+@media (max-width: 720px) {
+    .zr-root { padding-right: calc(20px * var(--kt)); }
+    .dc-acts { right: 8px; top: 8px; }
+    .dc-acts button { width: 34px; height: 34px; font-size: 17px; }
+    .zr-name { margin-left: 0; }
+}

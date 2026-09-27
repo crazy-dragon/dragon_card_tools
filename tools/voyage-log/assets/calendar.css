@@ -1,0 +1,579 @@
+/* ==========================================================================
+   星际航行日志 · 月历与卡面（结构与配色分离）
+   --------------------------------------------------------------------------
+   本文件只写**结构**，所有颜色走变量：
+     --vg-*  → 月历本身
+     外壳的 --study-* / --surface / --ink 等 → 由皮肤文件重映射
+
+   卡面（.ci-*）**不参与皮肤**：它是"一天的状态"，规则固定 ——
+     今天   = 深空（.ci-today）
+     历史   = 素净（.ci-past）
+     未来   = 淡紫锁定（.ci-future）
+   这三态直接照搬原模板 `default_cards/checkin_log/_src/card.css`，
+   所以换皮肤时卡面长相一个字都不变。
+   ========================================================================== */
+
+/* ===== 1. 目录：月份列表 ===== */
+#catalogue-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 14px; }
+
+.vg-month {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 5px;
+    min-height: 84px;
+    padding: 12px 10px;
+    border-radius: 14px;
+    border: 1px solid var(--vg-line);
+    background: var(--vg-panel);
+    color: var(--vg-ink);
+    font: inherit;
+    cursor: pointer;
+    transition: transform .18s, box-shadow .18s, border-color .18s, background .18s;
+}
+.vg-month:hover { transform: translateY(-3px); border-color: var(--vg-accent-line); }
+.vg-month:active { transform: scale(.96); }
+.vg-month .m-main { font-size: 15px; font-weight: 700; letter-spacing: .3px; font-variant-numeric: tabular-nums; }
+.vg-month .m-sub { font-size: 11.5px; color: var(--vg-ink-3); font-variant-numeric: tabular-nums; }
+.vg-month .m-dots { display: flex; gap: 3px; height: 5px; }
+.vg-month .m-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--vg-pip); }
+.vg-month .m-dots i.on { background: var(--vg-pip-on); }
+.vg-month.is-current { border-color: var(--vg-accent-line); background: var(--vg-cell-today); }
+.vg-month.is-current .m-main { color: var(--vg-accent); }
+.vg-month.is-open { box-shadow: 0 0 0 2px var(--vg-accent-ring); }
+.vg-year-sep {
+    grid-column: 1 / -1;
+    font-size: 12px; font-weight: 700; letter-spacing: 1px;
+    color: var(--vg-ink-3);
+    padding-top: 4px;
+}
+
+/* ===== 2. 月历 ===== */
+.vg-wrap { max-width: 1000px; margin: 0 auto; }   /* 原来 760px：1440px 屏上两侧全空，白瞎 */
+.vg-cal {
+    background: var(--vg-panel);
+    border: 1px solid var(--vg-line);
+    border-radius: 18px;
+    padding: 20px 20px 16px;
+}
+.vg-top { display: flex; align-items: center; margin-bottom: 18px; }
+.vg-nav {
+    width: 34px; height: 34px; flex: none;
+    border-radius: 50%;
+    border: 1px solid var(--vg-line);
+    background: var(--vg-cell);
+    color: var(--vg-ink-2);
+    font: inherit; font-size: 16px; line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .18s, color .18s;
+}
+.vg-nav:hover { background: var(--vg-cell-hover); color: var(--vg-ink); }
+.vg-nav:disabled { opacity: .25; cursor: default; }
+.vg-nav:disabled:hover { background: var(--vg-cell); color: var(--vg-ink-2); }
+.vg-title { flex: 1; text-align: center; font-size: 17px; font-weight: 600; letter-spacing: .8px; color: var(--vg-ink); }
+
+.vg-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; }
+.vg-wd { text-align: center; font-size: 11.5px; color: var(--vg-ink-3); padding-bottom: 8px; letter-spacing: 1px; }
+
+.vg-day {
+    position: relative;
+    height: 74px;                          /* 跟着 1000px 的宽度一起长高，免得格子太扁 */
+    border-radius: 11px;
+    background: var(--vg-cell);
+    border: 1px solid transparent;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 7px;
+    cursor: pointer;
+    transition: background .18s, border-color .18s, transform .18s, box-shadow .18s;
+}
+.vg-day.pad { background: transparent; pointer-events: none; }
+.vg-day:hover { background: var(--vg-cell-hover); transform: translateY(-1px); }
+.vg-day.on { background: var(--vg-cell-on); }
+.vg-day.on:hover { background: var(--vg-cell-on-hover); }
+.vg-day.future { background: var(--vg-cell-future); }
+.vg-day .vg-num { font-size: 14.5px; line-height: 1; color: var(--vg-ink-3); font-variant-numeric: tabular-nums; }
+.vg-day.on .vg-num { color: var(--vg-ink); }
+.vg-day.future .vg-num { color: var(--vg-ink-4); }
+
+/* 今天：加粗金色数字 + 双层光环，一眼能认出来 */
+.vg-day.today {
+    border-color: var(--vg-accent-line);
+    background: var(--vg-cell-today);
+    box-shadow: 0 0 0 2px var(--vg-accent-ring), var(--vg-today-glow);
+}
+.vg-day.today .vg-num { color: var(--vg-accent); font-weight: 700; }
+
+.vg-pips { display: flex; gap: 3.5px; height: 5px; }
+.vg-pips i { width: 5px; height: 5px; border-radius: 50%; background: var(--vg-pip); display: block; }
+.vg-pips i.on { background: var(--vg-pip-on); box-shadow: var(--vg-pip-glow); }
+.vg-pips i.pop { animation: vgPop .5s cubic-bezier(.3, 1.7, .5, 1); }
+@keyframes vgPop {
+    0%   { transform: scale(.35); }
+    62%  { transform: scale(1.55); }
+    100% { transform: scale(1); }
+}
+
+.vg-foot {
+    display: flex; justify-content: space-between;
+    margin-top: 16px; padding-top: 14px;
+    border-top: 1px solid var(--vg-line);
+    font-size: 12px; color: var(--vg-ink-3); letter-spacing: .3px;
+}
+
+/* ===== 3. 月历上的浮层提示（当天记录了哪几项） ===== */
+.vg-tip {
+    position: fixed; left: 0; top: 0; z-index: 40;
+    pointer-events: none; opacity: 0;
+    background: var(--vg-tip-bg);
+    border: 1px solid var(--vg-line);
+    border-radius: 9px;
+    padding: 7px 11px;
+    font-size: 12px; color: var(--vg-ink);
+    white-space: nowrap;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .18);
+    transition: opacity .14s;
+}
+.vg-tip.show { opacity: 1; }
+
+/* ===== 4. 某一天的卡面弹窗（A 版「宽幅驾驶舱」，2026-09-22 用户选定） =====
+   旧卡那套竖排窄条（min(520px,92vw)）当年是为"一列几百张卡叠着滚"设计的；
+   改成全屏小工具后没必要再守它 —— 1410px 屏上四分之三都是空的。
+   A 版：外扩到 980px，左栏留"星域"（卡的身份），右栏才是干活的地方。 */
+#day-modal { z-index: 60; }
+/* 这一天弹窗的遮罩：比结课弹窗更深、更少模糊 —— 后面留着月历，"点的是哪一天"看得见 */
+#day-modal.modal-overlay { background: rgba(9, 12, 26, .62); backdrop-filter: blur(2px); }
+.day-modal-box {
+    width: min(980px, 94vw);
+    max-height: 88vh;
+    overflow: auto;                    /* 字号放大到 1.8× 时优雅降级成滚动，而不是裁掉内容 */
+    border-radius: 20px;
+    background: var(--vg-panel);
+    box-shadow: 0 30px 80px rgba(2, 6, 23, .45);
+}
+.day-modal-box::-webkit-scrollbar { width: 8px; }
+.day-modal-box::-webkit-scrollbar-thumb { background: var(--vg-line); border-radius: 4px; }
+/* 卡面整体跟随字号倍率：zoom 会连盒子一起缩放，
+   所以不会出现"字放大了、圆点还那么大"的错位（见项目记忆的字号缩放铁律）。 */
+#day-card-host { zoom: var(--card-font-scale, 1); }
+
+/* ===== 5. 卡面（照搬 _src/card.css，去掉 body.dark-mode 段） ===== */
+.ci-card {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 0;
+    background: #fff;
+    border: 1px solid #e8edf5;
+    border-radius: 18px;
+    box-shadow: 0 6px 22px rgba(15, 23, 42, .06);
+    color: #1f2937;
+    line-height: 1.45;
+    transition: box-shadow .25s;
+}
+.ci-bar { height: 5px; background: linear-gradient(90deg, #34d399, #22d3ee, #818cf8); opacity: .9; }
+.ci-past .ci-bar { background: linear-gradient(90deg, #cbd5e1, #e2e8f0); }
+.ci-future .ci-bar { background: linear-gradient(90deg, #ddd6fe, #ede9fe); }
+.ci-body { padding: 15px 17px 16px; }
+
+/* ---- 头部：日期 + 连续天数 ---- */
+.ci-head { display: flex; align-items: center; gap: 12px; }
+.ci-date { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.ci-day { font-size: 32px; font-weight: 800; letter-spacing: -1px; color: #0f172a; font-variant-numeric: tabular-nums; }
+.ci-ym { display: flex; flex-direction: column; line-height: 1.15; }
+.ci-ym b { font-size: 12px; font-weight: 600; color: #64748b; }
+.ci-ym i { font-style: normal; font-size: 11px; color: #94a3b8; }
+.ci-today-chip {
+    align-self: flex-start; margin-top: 3px; padding: 1px 7px;
+    border-radius: 999px; background: #ecfdf5; color: #059669;
+    font-size: 10px; font-weight: 700; letter-spacing: .5px;
+}
+.ci-streak {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 11px; border-radius: 999px;
+    background: #fff7ed; border: 1px solid #fed7aa; color: #c2410c;
+    font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.ci-streak i { font-size: 12px; color: #f97316; }
+.ci-streak b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.ci-streak em { font-style: normal; font-size: 11px; font-weight: 600; opacity: .75; }
+.ci-streak.is-idle { background: #f8fafc; border-color: #e2e8f0; color: #94a3b8; }
+.ci-streak.is-idle i { color: #cbd5e1; }
+
+.ci-status { font-size: 12px; color: #94a3b8; margin: 8px 0 12px; }
+
+/* ---- 任务行 ---- */
+.ci-tasks { display: flex; flex-direction: column; gap: 8px; }
+.ci-task {
+    display: flex; align-items: center; gap: 11px;
+    padding: 10px 12px; border-radius: 13px;
+    border: 1px solid #eef2f7; background: #fbfcfe;
+    transition: background .18s, border-color .18s, transform .12s;
+}
+.ci-today .ci-task { cursor: pointer; }
+.ci-today .ci-task:hover { background: #f5f9ff; border-color: #dbe6f7; }
+.ci-today .ci-task:active { transform: scale(.985); }
+.ci-dot {
+    width: 26px; height: 26px; flex: 0 0 26px; border-radius: 50%;
+    border: 2px dashed #cbd5e1; background: #fff;
+    display: grid; place-items: center;
+    color: #fff; transition: all .2s;
+}
+/* 两个图标必须叠在同一格。用 flex 会并排占位，把可见图标挤出圆心（歪） */
+.ci-dot > i { grid-area: 1 / 1; line-height: 1; }
+.ci-dot [data-role="dot-task"] { font-size: 12px; opacity: 1; color: #94a3b8; }
+.ci-dot [data-role="dot-check"] { font-size: 11px; opacity: 0; }
+.ci-task.done .ci-dot [data-role="dot-task"] { opacity: 0; }
+.ci-task.done .ci-dot [data-role="dot-check"] { opacity: 1; }
+.ci-task.done .ci-dot { border: 2px solid #10b981; border-style: solid; background: linear-gradient(135deg, #34d399, #10b981); }
+.ci-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.ci-info b { font-size: 14px; font-weight: 600; color: #1e293b; }
+.ci-info i { font-style: normal; font-size: 11px; color: #a2adbf; margin-top: 1px; }
+.ci-right {
+    flex: 0 0 auto; font-size: 12px; font-weight: 700; color: #94a3b8;
+    display: inline-flex; align-items: center; gap: 5px;
+    font-variant-numeric: tabular-nums;
+}
+.ci-task.done { background: #f0fdf4; border-color: #bbf7d0; }
+.ci-task.done .ci-info b { color: #047857; }
+.ci-task.done .ci-right { color: #059669; }
+.ci-task.ci-pop { animation: ciPop .42s ease; }
+@keyframes ciPop {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+/* ---- 过期 / 未解锁 ---- */
+.ci-past { background: #fbfbfc; border-color: #eceff4; box-shadow: none; }
+.ci-past .ci-day { color: #94a3b8; }
+.ci-past .ci-task { background: #f7f8fa; }
+.ci-future { background: #fcfbff; border-color: #eee9fb; box-shadow: none; }
+.ci-future .ci-day { color: #b4b9c6; }
+.ci-lock {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 16px; border-radius: 13px;
+    border: 1px dashed #ddd6fe; background: #faf9ff;
+    color: #a78bfa; font-size: 13px; font-weight: 600;
+}
+
+/* ---- 最近 7 天活跃条 ---- */
+.ci-week { display: flex; gap: 6px; margin-top: 13px; }
+.ci-wd { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.ci-wd span { font-size: 10px; color: #a8b2c4; }
+.ci-wd i { width: 100%; height: 6px; border-radius: 999px; background: #eef1f6; transition: background .2s; }
+.ci-wd.on i { background: linear-gradient(90deg, #34d399, #10b981); }
+.ci-wd.cur i { outline: 2px solid #bfdbfe; outline-offset: 1px; }
+.ci-wd.now span { color: #2563eb; font-weight: 700; }
+
+/* ==========================================================================
+   星际航行 · 星夜版（只作用于"今天"那张卡，恒为暗色、不跟随皮肤）
+   ========================================================================== */
+.ci-today {
+    background-color: #141a2e;
+    background-image:
+        radial-gradient(rgba(165, 180, 252, .17) 1px, transparent 1.3px),
+        radial-gradient(rgba(139, 92, 246, .13) 1px, transparent 1.3px),
+        radial-gradient(rgba(255, 255, 255, .10) 1px, transparent 1.3px);
+    background-size: 23px 23px, 41px 41px, 59px 59px;
+    background-position: 0 0, 17px 13px, 31px 29px;
+    border-color: #2b3153;
+    color: #e2e8f0;
+    box-shadow: 0 12px 32px rgba(2, 6, 23, .38);
+}
+.ci-today .ci-bar {
+    height: 6px;
+    opacity: 1;
+    background-image:
+        radial-gradient(circle at 11% 50%, rgba(255, 255, 255, .95) 0 1px, transparent 1.7px),
+        radial-gradient(circle at 34% 50%, rgba(255, 255, 255, .78) 0 1px, transparent 1.6px),
+        radial-gradient(circle at 58% 50%, rgba(255, 255, 255, .92) 0 1px, transparent 1.7px),
+        radial-gradient(circle at 79% 50%, rgba(255, 255, 255, .70) 0 1px, transparent 1.6px),
+        radial-gradient(circle at 93% 50%, rgba(255, 255, 255, .85) 0 1px, transparent 1.6px),
+        linear-gradient(90deg, #4f46e5, #7c3aed 42%, #a855f7 72%, #d946ef);
+    box-shadow: 0 1px 16px rgba(139, 92, 246, .50);
+}
+.ci-today .ci-day { color: #f2f4ff; text-shadow: 0 2px 14px rgba(129, 140, 248, .45); }
+.ci-today .ci-ym b { color: #9aa7be; }
+.ci-today .ci-ym i { color: #7480a0; }
+.ci-today .ci-today-chip { background: #232a52; color: #a5b4fc; }
+.ci-today .ci-streak {
+    background: linear-gradient(135deg, #232a52, #2b2352);
+    border-color: #3b4478;
+    color: #c7d2fe;
+    box-shadow: 0 3px 14px rgba(79, 70, 229, .30);
+}
+.ci-today .ci-streak i { color: #818cf8; }
+.ci-today .ci-streak.is-idle { background: #1a1f36; border-color: #2b3153; color: #6f7899; box-shadow: none; }
+.ci-today .ci-streak.is-idle i { color: #565f85; }
+.ci-today .ci-status { color: #8b93b5; }
+.ci-today .ci-task { background: #1c2138; border-color: #2b3158; }
+.ci-today .ci-task:hover { background: #232a4d; border-color: #3a4272; }
+.ci-today .ci-info b { color: #e8ecf8; }
+.ci-today .ci-info i { color: #8b93b5; }
+.ci-today .ci-dot { border-color: #3f4778; background: #141a2e; }
+.ci-today .ci-dot [data-role="dot-task"] { color: #8b93c4; }
+.ci-today .ci-right { color: #a5b4fc; }
+.ci-today .ci-task.done {
+    background: linear-gradient(90deg, #2a2413, #1c2138 72%);
+    border-color: #4d3c15;
+}
+.ci-today .ci-task.done .ci-info b { color: #fbbf24; }
+.ci-today .ci-task.done .ci-info i { color: #a08a55; }
+.ci-today .ci-task.done .ci-right { color: #fbbf24; }
+.ci-today .ci-task.done .ci-dot {
+    border: 2px solid #f59e0b;
+    background: radial-gradient(circle at 34% 28%, #fde68a, #f59e0b 72%);
+    animation: ciVoyageTwinkle 2.8s ease-in-out infinite;
+}
+@keyframes ciVoyageTwinkle {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(251, 191, 36, .16), 0 0 10px rgba(245, 158, 11, .55); }
+    50%      { box-shadow: 0 0 0 4px rgba(251, 191, 36, .26), 0 0 18px rgba(245, 158, 11, .85); }
+}
+.ci-today .ci-week { gap: 0; margin-top: 16px; padding: 0 2px; }
+.ci-today .ci-wd { position: relative; gap: 6px; }
+.ci-today .ci-wd span { color: #6f7a99; }
+.ci-today .ci-wd i {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #252b47; border: 1.5px solid #39406b;
+    position: relative; z-index: 1;
+    transition: background .25s, border-color .25s, box-shadow .25s;
+}
+.ci-today .ci-wd:not(:last-child)::after {
+    content: ''; position: absolute; left: 50%; right: -50%; bottom: 3.5px;
+    height: 2px; background: #252b47; z-index: 0;
+}
+.ci-today .ci-wd.on i {
+    background: radial-gradient(circle at 34% 28%, #fde68a, #f59e0b 70%);
+    border-color: #f59e0b;
+    box-shadow: 0 0 10px rgba(245, 158, 11, .60);
+}
+.ci-today .ci-wd.cur i { outline: 2px solid #4c5590; outline-offset: 2px; }
+.ci-today .ci-wd.now span { color: #a5b4fc; font-weight: 700; }
+
+/* ---------- 黑洞（今天的印记）—— 纯 CSS，无 canvas / 无 rAF ---------- */
+.bh { position: relative; display: block; width: 44px; height: 44px; }
+.bh > span { position: absolute; border-radius: 50%; }
+.bh-halo {
+    inset: -42%;
+    background: radial-gradient(circle,
+        rgba(139, 92, 246, .40) 0%,
+        rgba(99, 102, 241, .16) 42%,
+        rgba(99, 102, 241, 0) 68%);
+    animation: ciBhGlow 4.5s ease-in-out infinite;
+    z-index: 1;
+}
+.bh-disk { inset: -12%; transform: perspective(130px) rotateX(64deg); z-index: 2; }
+.bh-disk::before {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg,
+        rgba(255, 255, 255, 0) 0deg,
+        #fde68a 26deg, #fbbf24 54deg, #fb7185 96deg, #c084fc 134deg,
+        rgba(255, 255, 255, 0) 168deg,
+        rgba(255, 255, 255, 0) 196deg,
+        #60a5fa 238deg, #22d3ee 282deg, #a78bfa 316deg,
+        rgba(255, 255, 255, 0) 348deg, rgba(255, 255, 255, 0) 360deg);
+    -webkit-mask: radial-gradient(circle, rgba(0, 0, 0, 0) 32%, #000 46%);
+    mask: radial-gradient(circle, rgba(0, 0, 0, 0) 32%, #000 46%);
+    filter: blur(2.4px);
+    animation: ciBhSpin 6.5s linear infinite;
+}
+.bh-arc { inset: -6%; z-index: 3; }
+.bh-arc::before {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    border: 1.8px solid transparent;
+    border-top-color: rgba(255, 255, 255, .95);
+    border-bottom-color: rgba(253, 230, 138, .80);
+    box-shadow: 0 0 6px rgba(255, 255, 255, .35);
+    animation: ciBhSpin 3.2s linear infinite;
+}
+.bh-core {
+    inset: 25%;
+    background: radial-gradient(circle at 50% 45%, #000 58%, #0b0a18 100%);
+    box-shadow: 0 0 0 1.5px rgba(226, 232, 240, .70),
+                0 0 10px rgba(99, 102, 241, .40),
+                0 0 16px rgba(2, 6, 23, .45);
+    z-index: 4;
+}
+@keyframes ciBhSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes ciBhGlow { 0%, 100% { opacity: .72; } 50% { opacity: 1; } }
+.ci-today .bh {
+    flex: 0 0 auto;
+    width: 46px; height: 46px;
+    margin-right: 3px;
+}
+
+/* 弹窗里没有长列表要区分，所以历史卡不必"降噪"到列表里的那种程度；
+   其余保持原样。 */
+@media (max-width: 560px) {
+    .vg-day { height: 56px; border-radius: 9px; gap: 5px; }
+    .vg-day .vg-num { font-size: 13px; }
+    .vg-pips i { width: 4px; height: 4px; }
+    .vg-cal { padding: 16px 14px 12px; }
+    #catalogue-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ==========================================================================
+   6. A 版「宽幅驾驶舱」——「某一天」的版式（2026-09-22 用户选定）
+   --------------------------------------------------------------------------
+   左栏 = 星域：留住卡的身份（大日期 / 今天胶囊 / 航行第 N 天 / 黑洞 / 7 天航迹）
+   右栏 = 干活的地方：任务行 + 本月一览星条 + 状态行
+
+   两条硬约束：
+   ① 弹窗是**卡面**的一部分，不是外壳 —— 所以它**不跟皮肤**（底色恒为浅色，
+      左边那栏自己带三态：今天深空 / 历史素净 / 未来淡紫）。
+   ② 栅格列宽一律用百分比，**不写死 px**。字号是 `zoom` 整体缩放的，
+      写死 372px 在 1.8× 下会变成 670px，把右栏挤没（见项目记忆的字号缩放铁律）。
+   ========================================================================== */
+.dv-a { display: grid; grid-template-columns: minmax(0, 38%) 1fr; min-height: 380px; }
+
+/* ---- 左栏：星域（沿用 .ci-card / .ci-today / .ci-past / .ci-future 的配色） ---- */
+.dv-a-left { position: relative; overflow: hidden; }
+.dv-a-left .ci-card {
+    height: 100%;
+    border-radius: 0; border: none; box-shadow: none;
+    margin-bottom: 0;
+}
+.dv-a-left .ci-body {
+    box-sizing: border-box;
+    height: calc(100% - 6px);           /* 减掉 .ci-bar 的 6px（今天态） */
+    padding: 22px 24px;
+    display: flex; flex-direction: column;
+    justify-content: center;            /* 历史/未来：头 + 航迹作为一组居中，不留半个空洞 */
+}
+.dv-a-left .ci-card.ci-today .ci-body { justify-content: flex-start; }
+.dv-a-left .ci-card.ci-today .ci-week { margin-top: auto; }   /* 今天：航迹钉在底边 */
+/* 黑洞吃掉中段的余白（"大留白必须用内容填"）——孤零零一颗黑洞在星野里正好 */
+.dv-a-bh { flex: 1; display: flex; align-items: center; justify-content: center; margin: 12px 0 6px; }
+.dv-a-bh .bh { width: 108px; height: 108px; margin-right: 0; }   /* 覆写内联态的 46px */
+
+/* 历史 / 未来的中段：一件"当天的事"顶住留白（今天那里是黑洞） */
+.dv-a-hero {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px;
+}
+.dv-a-hero b {
+    font-size: 54px; font-weight: 800; line-height: 1; letter-spacing: -2px;
+    color: #f59e0b; font-variant-numeric: tabular-nums;
+}
+.dv-a-hero em { font-style: normal; font-size: 12px; color: #94a3b8; }
+.dv-a-hero.is-idle b { color: #cbd5e1; }
+.dv-a-hero.is-locked i { font-size: 36px; color: #c4b5fd; }
+.dv-a-hero.is-locked em { color: #a78bfa; }
+
+/* ---- 右栏：任务清单 ---- */
+.dv-a-right { padding: 26px 28px; display: flex; flex-direction: column; background: #fff; }
+.dv-a-cap { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.dv-a-cap h3 { margin: 0; font-size: 17px; font-weight: 700; color: #0f172a; }
+.dv-a-cap em {
+    font-style: normal; font-size: 12px; font-weight: 700; color: #10b981;
+    background: #ecfdf5; border-radius: 999px; padding: 2px 9px;
+}
+.dv-a-cap em.is-idle { color: #94a3b8; background: #f1f5f9; }
+.dv-a-sub { font-size: 12px; color: #94a3b8; margin: 0 0 18px; }
+.dv-a-right .ci-tasks { gap: 10px; }
+.dv-a-right .ci-task { padding: 14px 15px; }
+.dv-a-right .ci-info b { font-size: 15px; }
+
+/* 任务行 hover 高亮（2026-09-22 用户反馈「点亮的时候没有反馈」）
+   ⚠️ 不能用 `.ci-today .ci-task` 去命中：`ci-today` 只挂左栏那张深空卡，
+      而任务行现在住在右栏（浅色工作区）——它们是兄弟节点，后代选择器根本选不中，
+      所以既没有 pointer 光标、也没有 hover 变色的反馈（这就是"点了像没反应"的根因）。
+      改从外层 `.dv-a[data-mode]` 进：today = 可点，past/future = 只读。 */
+.dv-a[data-mode="today"] .ci-task:not(.done) { cursor: pointer; }
+.dv-a[data-mode="today"] .ci-task:not(.done):hover {
+    background: #f2f8ff; border-color: #c7ddfb;
+    transform: translateX(2px);
+    box-shadow: 0 2px 10px rgba(59, 130, 246, .10);
+}
+.dv-a[data-mode="today"] .ci-task:not(.done):active { transform: translateX(2px) scale(.985); }
+/* hover 时把「点亮」染成主色 + 前面的 ＋ 淡入（给一个"这里能点"的明确信号） */
+.dv-a[data-mode="today"] .ci-task:not(.done) .ci-right { transition: color .18s; }
+.dv-a[data-mode="today"] .ci-task:not(.done) .ci-right i { font-size: 10px; opacity: .45; transition: opacity .18s; }
+.dv-a[data-mode="today"] .ci-task:not(.done):hover .ci-right { color: #2563eb; }
+.dv-a[data-mode="today"] .ci-task:not(.done):hover .ci-right i { opacity: 1; }
+.dv-a[data-mode="past"] .ci-task { cursor: default; }
+
+/* ---- 本月一览星条 ---- */
+.dv-a-mbox { margin-top: 26px; }
+.dv-a-mcap {
+    font-size: 11px; font-weight: 700; letter-spacing: .14em;
+    color: #a8b2c4; margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-variant-numeric: tabular-nums;
+}
+.dv-mstrip { display: grid; grid-template-columns: repeat(15, 1fr); gap: 5px; }
+.dv-mstrip i {
+    display: block; height: 9px; border-radius: 3px;
+    background: #eef1f6; border: 1px solid transparent;
+}
+.dv-mstrip i.on {
+    background: linear-gradient(90deg, #fbbf24, #f59e0b);
+    box-shadow: 0 0 6px rgba(245, 158, 11, .35);
+}
+.dv-mstrip i.today { border-color: #93c5fd; box-shadow: 0 0 0 1px #93c5fd; }
+.dv-mstrip i.future { background: #f5f7fa; }
+
+/* ---- 底部：状态行 ---- */
+.dv-a-foot {
+    margin-top: auto; padding-top: 16px; border-top: 1px solid #eef2f7;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; font-size: 12px; color: #94a3b8;
+}
+.dv-a-foot b { color: #0f172a; font-variant-numeric: tabular-nums; }
+
+/* ---- 窄屏：两栏叠起来 ---- */
+@media (max-width: 720px) {
+    .dv-a { grid-template-columns: 1fr; min-height: 0; }
+    .dv-a-left .ci-body { height: auto; }
+    .dv-a-bh { margin: 14px 0 4px; }
+    .dv-a-bh .bh { width: 76px; height: 76px; }
+    .dv-a-right { padding: 18px 18px 20px; }
+    .dv-a-foot { margin-top: 18px; }
+}
+
+/* ==========================================================================
+   7. 点亮确认小弹窗（是 / 否）
+   2026-09-22 用户：「我点亮的时候没有反馈，好像点了两次就行了，很奇怪，
+   我希望鼠标移入会高亮，点击会有小弹窗（是，否即可）」
+
+   原来走的是卡面自带的两段式：「第一次点 → 右边小字从『点亮』变成『确认』，
+   再点一次才真的记」。问题在于深色卡面上那个变化只有 12px 字，等于没有反馈，
+   用户读完就以为自己点了两下。现在改成真正的确认弹窗：
+   点一行 → 弹窗（是 / 否）→ 点「是」才写库。
+   ⚠️ z-index 要压过 #day-modal（500）—— 它俩会同时开着。
+   ⚠️ 这个节点在 body 下、不在 #day-card-host 里，所以**不吃字号缩放**（正合适）。
+   ========================================================================== */
+#task-modal { z-index: 600; background: rgba(15, 23, 42, .34); }
+.task-modal {
+    width: 320px; max-width: 88vw;
+    /* ⚠️ 底色写死浅色，**不用** var(--modal-bg)：星夜皮肤会把那个变量改成 #131B2E，
+       而这个弹窗永远压在一张浅色卡面上（卡面不跟皮肤），深底 + 深字会糊成一团。 */
+    background: #fff;
+    border-radius: 18px;
+    padding: 24px 22px 18px;
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(2, 6, 23, .28);
+}
+.task-modal-icon {
+    width: 52px; height: 52px; margin: 0 auto 12px;
+    border-radius: 999px; display: grid; place-items: center;
+    background: #fff7e6; color: #f59e0b; font-size: 21px;
+}
+.task-modal-title { font-size: 16px; font-weight: 700; color: #0f172a; line-height: 1.45; }
+.task-modal-sub { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+.task-modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.task-modal-actions button {
+    flex: 1; min-height: 44px;
+    border: 0; border-radius: 999px;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+#task-modal-no { background: #f1f5f9; color: #475569; }
+#task-modal-no:hover { background: #e2e8f0; }
+#task-modal-yes { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; }
+#task-modal-yes:hover { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.task-modal-actions button:focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }

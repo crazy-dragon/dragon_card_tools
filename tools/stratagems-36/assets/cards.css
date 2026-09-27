@@ -1,0 +1,302 @@
+/* ==========================================================================
+   三十六计 · 卡面（.st-*）
+   ==========================================================================
+   照搬模板 26「三十六计 · 古朴」/ 模板 27「36 Stratagems · Classical」
+   （两张模板的 CSS 几乎逐字相同，只有文案与 modern/reflection 的区别）：
+
+     纸底 #f3e9d2 / 墨 #3a2e22 / 朱红 #9e3b2e / 金边 #b89b6a
+     Georgia + 宋体一系的衬线字，12px 圆角，套别用「印章」贴右上角
+
+   ⚠️ 与原模板的三处**有意差异**（都是为了对上工具这一代的规矩）：
+     1. 所有尺寸走 calc(Npx * var(--kt)) —— 原模板是死 px，工具的字号滑杆拉不动它。
+     2. 动作按钮改成**纯图标 + hover 悬浮标签**（原模板是 icon 带文字），
+        和音标拼读 / 西方典故 / 元素周期表那几个工具一致。
+     3. 加了套别配色（.st-set1..6）与三套皮肤；原模板只有一种纸色。
+        —— 皮肤只换颜色，不动版式。
+
+   ⚠️ 翻面用 display:none 切换（原模板就是这么做的），**不是 3D 翻转**：
+      英文版正文最长 163 字符（中文只有 35），固定高度会撑爆；两张脸各自撑高最省事。
+
+   动作栏放在**卡片底部右对齐**（原模板的位置），不是右上角悬浮轨道。
+   ========================================================================== */
+
+/* ===== 1. 套别配色（6 套；索引来自数据里的 setIndex） ===== */
+.st-set1 { --cat: #b0442f; }
+.st-set2 { --cat: #2f6ac0; }
+.st-set3 { --cat: #a1841c; }
+.st-set4 { --cat: #7c44b4; }
+.st-set5 { --cat: #1f8a70; }
+.st-set6 { --cat: #b0446b; }
+html.skin-glass .st-set1 { --cat: #e0806a; }
+html.skin-glass .st-set2 { --cat: #7fa9e8; }
+html.skin-glass .st-set3 { --cat: #cbb553; }
+html.skin-glass .st-set4 { --cat: #c19bf0; }
+html.skin-glass .st-set5 { --cat: #5fc7a8; }
+html.skin-glass .st-set6 { --cat: #e88aae; }
+
+/* ===== 2. 卡面的皮肤 token（默认 = 原模板的纸色） ===== */
+.st-root {
+    --st-bg: #f3e9d2;
+    --st-ink: #3a2e22;
+    --st-line: #b89b6a;
+    --st-accent: #9e3b2e;
+    --st-soft: rgba(158, 59, 46, .07);
+    --st-quiet: #7a6a52;
+    --st-hint: #a08a66;
+    --st-pill-bg: #9e3b2e;
+    --st-pill-fg: #f7efe0;
+    --st-act-bg: #fbf3e0;
+}
+html.skin-glass .st-root {
+    --st-bg: #221d29;
+    --st-ink: #ece6f2;
+    --st-line: rgba(255, 255, 255, .20);
+    --st-accent: #e2826f;
+    --st-soft: rgba(226, 130, 111, .13);
+    --st-quiet: #b7aec6;
+    --st-hint: #8f86a0;
+    --st-pill-bg: #e2826f;
+    --st-pill-fg: #221d29;
+    --st-act-bg: rgba(255, 255, 255, .07);
+}
+/* 分类彩：套别色就是主色。--cat 声明在 .st-root 上（.st-setN），
+   所以读它的规则也必须落在 .st-root 自己身上 —— var() 在声明元素上就解析完了。 */
+html.skin-category .st-root {
+    border-color: var(--cat);
+    border-left-width: 5px;
+    --st-accent: var(--cat);
+    --st-pill-bg: var(--cat);
+    --st-pill-fg: #fffdf8;
+    --st-soft: transparent;
+}
+
+/* ===== 3. 卡本体 ===== */
+.st-root {
+    position: relative;
+    font-family: Georgia, "Songti SC", "STSong", "Noto Serif SC", "Times New Roman", serif;
+    background: var(--st-bg);
+    color: var(--st-ink);
+    border: 1px solid var(--st-line);
+    border-radius: calc(12px * var(--kt));
+    padding: calc(16px * var(--kt));
+    box-shadow: inset 0 0 0 1px rgba(158, 59, 46, .10);
+}
+html.skin-glass .st-root { backdrop-filter: blur(14px) saturate(140%); }
+
+/* ===== 4. 套别印章（总览卡右上角） ===== */
+.st-seal {
+    position: absolute;
+    top: calc(16px * var(--kt));
+    right: calc(16px * var(--kt));
+    width: calc(44px * var(--kt));
+    height: calc(44px * var(--kt));
+    border: 2px solid var(--st-accent);
+    border-radius: calc(8px * var(--kt));
+    color: var(--st-accent);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(-7deg);
+    font-weight: bold;
+    font-size: calc(13px * var(--kt));
+    line-height: 1.15;
+    letter-spacing: .5px;
+    text-align: center;
+    padding: 0 3px;
+    box-sizing: border-box;
+}
+/* 印章副行：只给英文用 —— 英文套名太长，印章主体写 SET，序号落在这一行 */
+.st-seal-sub { font-size: calc(9px * var(--kt)); font-weight: normal; letter-spacing: 1px; margin-top: calc(1px * var(--kt)); }
+
+/* ===== 5. 总览卡（每个套别的章节页，不可翻面） ===== */
+.st-overview { cursor: default; }
+/* 总览卡最后一块是纯正文，没有 .st-sec 的段间距，动作栏单独多留一口气 */
+.st-overview .st-acts { margin-top: calc(20px * var(--kt)); }
+.st-ov-title {
+    font-size: calc(30px * var(--kt));
+    font-weight: bold;
+    margin: calc(6px * var(--kt)) calc(56px * var(--kt)) calc(4px * var(--kt)) 0;
+    letter-spacing: calc(2px * var(--kt));
+    line-height: 1.25;
+}
+.st-ov-theme {
+    font-size: calc(14px * var(--kt));
+    color: var(--st-accent);
+    margin-bottom: calc(10px * var(--kt));
+    letter-spacing: 1px;
+}
+.st-ov-body { font-size: calc(16px * var(--kt)); line-height: 1.8; }
+
+/* ===== 6. 计卡：正面 / 翻面 ===== */
+.st-stratagem.flipped .st-front { display: none; }
+.st-stratagem:not(.flipped) .st-back { display: none; }
+.st-front, .st-back { cursor: pointer; }
+
+/* 顶部一行：「第 N 计」在左、套别胶囊在右。
+   原模板把胶囊 position:absolute 贴在右上角，靠 .st-name 的 margin-right 让位
+   —— 中文套名三个字够用，英文套名（最长 26 字符）在 420px 窄屏 + 145% 字号下
+   会把「Stratagem 1」压住。改成同一行 flex，长套名只会把名字往下挤，不会叠字。 */
+.st-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(8px * var(--kt));
+    margin-bottom: calc(2px * var(--kt));
+}
+.st-order {
+    flex: 0 0 auto;
+    font-size: calc(13px * var(--kt));
+    color: var(--st-quiet);
+    letter-spacing: 1px;
+}
+.st-pill {
+    flex: 0 1 auto;
+    min-width: 0;               /* 允许在窄屏收窄，配合下面的 ellipsis */
+    background: var(--st-pill-bg);
+    color: var(--st-pill-fg);
+    font-size: calc(12px * var(--kt));
+    padding: calc(3px * var(--kt)) calc(10px * var(--kt));
+    border-radius: 999px;
+    letter-spacing: .5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.st-name {
+    font-size: calc(36px * var(--kt));
+    font-weight: bold;
+    margin: calc(6px * var(--kt)) 0 calc(4px * var(--kt)) 0;
+    letter-spacing: calc(3px * var(--kt));
+    line-height: 1.2;
+}
+/* 英文计名最长 39 字符，36px 会顶穿 —— 英文模式整体降到 24px */
+html.lang-en .st-name { font-size: calc(24px * var(--kt)); letter-spacing: 0; }
+html.lang-en .st-ov-title { font-size: calc(24px * var(--kt)); letter-spacing: 0; }
+
+.st-pinyin { font-size: calc(15px * var(--kt)); color: var(--st-quiet); font-style: italic; }
+.st-source {
+    margin-top: calc(12px * var(--kt));
+    padding: calc(10px * var(--kt)) calc(12px * var(--kt));
+    background: var(--st-soft);
+    border-radius: calc(8px * var(--kt));
+    font-size: calc(15px * var(--kt));
+    line-height: 1.7;
+    border-left: 3px solid var(--st-accent);
+}
+.st-hint {
+    margin-top: calc(12px * var(--kt));
+    font-size: calc(11px * var(--kt));
+    color: var(--st-hint);
+    text-align: right;
+}
+
+/* ===== 7. 翻面后的三段 ===== */
+.st-sec { margin-top: calc(12px * var(--kt)); }
+.st-sec:first-child { margin-top: 0; }
+.st-sec-h {
+    font-size: calc(14px * var(--kt));
+    color: var(--st-accent);
+    border-left: 3px solid var(--st-accent);
+    padding-left: calc(7px * var(--kt));
+    margin-bottom: calc(4px * var(--kt));
+    letter-spacing: 1px;
+}
+.st-sec-b { font-size: calc(17px * var(--kt)); line-height: 1.75; }
+
+/* ===== 8. 第 36 计的彩蛋 ===== */
+.st-egg { margin-top: calc(14px * var(--kt)); position: relative; }
+.st-egg-stamp {
+    position: absolute;
+    top: calc(-4px * var(--kt));
+    right: 0;
+    width: calc(64px * var(--kt));
+    height: calc(64px * var(--kt));
+    border: 2px solid var(--st-accent);
+    border-radius: calc(8px * var(--kt));
+    color: var(--st-accent);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(-12deg);
+    font-weight: bold;
+    font-size: calc(20px * var(--kt));
+    line-height: 1.1;
+    opacity: .85;
+    box-shadow: 0 0 0 2px rgba(158, 59, 46, .15);
+    box-sizing: border-box;
+}
+.st-egg-stamp-sub { font-size: calc(9px * var(--kt)); font-weight: normal; letter-spacing: 1px; margin-top: calc(3px * var(--kt)); }
+.st-egg-note {
+    margin-top: calc(12px * var(--kt));
+    padding-right: calc(76px * var(--kt));
+    font-size: calc(14px * var(--kt));
+    color: var(--st-accent);
+    line-height: 1.7;
+    border-top: 1px dashed var(--st-line);
+    padding-top: calc(8px * var(--kt));
+}
+@keyframes st-run-away {
+    0%   { transform: translateX(0) rotate(0); opacity: 1; }
+    25%  { transform: translateX(34px) rotate(6deg); opacity: .5; }
+    50%  { transform: translateX(34px) rotate(6deg); opacity: .5; }
+    65%  { transform: translateX(-26px) rotate(-5deg); opacity: .6; }
+    100% { transform: translateX(0) rotate(0); opacity: 1; }
+}
+.st-run { animation: st-run-away .7s ease; }
+@keyframes st-whoosh {
+    0%   { opacity: 0; transform: translateX(0); }
+    30%  { opacity: .9; transform: translateX(40px); }
+    100% { opacity: 0; transform: translateX(95px); }
+}
+.st-run::after {
+    content: var(--st-whoosh, '嗖——');
+    position: absolute;
+    top: 38%;
+    left: 58%;
+    color: var(--st-accent);
+    font-size: calc(15px * var(--kt));
+    opacity: .8;
+    pointer-events: none;
+    animation: st-whoosh .7s ease;
+}
+html.lang-en .st-root { --st-whoosh: 'Whoosh——'; }
+
+/* ===== 9. 动作栏（卡片底部、右对齐；纯图标 + 悬浮标签） ===== */
+.st-acts {
+    display: flex;
+    justify-content: flex-end;
+    gap: 2px;
+    padding: 2px;
+    margin-top: calc(14px * var(--kt));
+    border-radius: calc(13px * var(--kt));
+    background: var(--st-act-bg);
+    border: 1px solid var(--st-line);
+    width: fit-content;
+    margin-left: auto;      /* 右对齐 */
+}
+.st-acts button {
+    width: calc(40px * var(--kt));
+    height: calc(40px * var(--kt));
+    border-radius: calc(11px * var(--kt));
+    border: 0;
+    background: transparent;
+    color: var(--st-quiet);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(18px * var(--kt));
+    line-height: 1;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.st-acts button:hover { background: var(--act-hover); color: var(--st-accent); }
+.st-acts button:active { transform: scale(.94); }
+.st-acts button.act-mark.is-active { color: var(--gold); }
+.st-acts button.act-fav.is-active { color: var(--rose); }
+
+/* ===== 10. 单卡模式：卡在舞台里独占一行 ===== */
+.single-card-stage .st-root { box-shadow: 0 12px 34px rgba(58, 44, 20, .16); }
+html.skin-glass .single-card-stage .st-root { box-shadow: 0 16px 44px rgba(0, 0, 0, .5); }

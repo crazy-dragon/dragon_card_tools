@@ -1,0 +1,761 @@
+/* ==========================================================================
+   COCA20000 词卡 · 小工具
+   --------------------------------------------------------------------------
+   与 DragonCard 本体（static/styles.css 的「STUDY LAYOUT」段）逐条对齐。
+   本文件只放「布局与皮肤」；词卡本身的外观在 index.html 的
+   <style id="style-jade"> / <style id="style-simple"> 里，由 JS 切换。
+
+   与本体保持一致的要点（改这里之前先看本体对应行）：
+     · :root token 名与值直接抄本体（含 --study-* 与 --tab-*）
+     · 侧栏 160px / .sidebar-content padding:4px 8px 12px / gap:2px
+     · 页签 14px 20px 内边距 · radius 90px · min-height 48px · 活跃态 4px×22px 左色条
+     · topbar gap:10px · .top-btn 38×38 透明无边框 · 图标 22px · 标题是青色胶囊
+     · .study-content padding:24px 20px + justify-content:safe center
+     · .sc-card-wrap 高度恒定 min(760px, 100vh - 140px) —— 切卡不跳高
+   本体特有的东西没有搬过来（小工具是独立文档，用不上）：
+     220px 全局侧栏 .global-sidebar / #home-panel / 返回主页按钮 / 3D 预览按钮
+   ========================================================================== */
+
+/* ===== 1. Token（抄本体 :root + STUDY LAYOUT 段） ===== */
+:root {
+    /* Study page (teal/sage) */
+    --primary: #0f766e;
+    --primary-light: #14b8a6;
+    --primary-dark: #115e59;
+    --primary-soft: #ccfbf1;
+    --primary-ring: rgba(15, 118, 110, 0.30);
+    --primary-shadow: rgba(15, 118, 110, 0.25);
+    --amber: #d97706;
+    --amber-soft: #fef3c7;
+    --unknown: #f43f5e;
+    --unknown-soft: #ffe4e6;
+    --mastered: #0f766e;
+    --slate: #64748b;
+    --slate-soft: #f1f5f9;
+    --ink: #1d1d1d;
+    --ink-2: #475569;
+    --ink-3: #64748b;
+    /* 本体 body 的文本色走的是 --hp-text（主页 token），不是 --ink。
+       两个值不一样（#24292f vs #1d1d1d），要「完全一样」就得分开留。 */
+    --hp-text: #24292f;
+    --line: #e6e6e6;
+    --line-2: #e5e7eb;
+    --surface: #ffffff;
+    --card-bg: #ffffff;
+    --btn-bg: #ffffff;
+    --dropdown-bg: #ffffff;
+    --modal-bg: #ffffff;          /* 结课弹窗底色（本体 :root 第 51 行同款） */
+    --hp-border: #d0d7de;         /* 结课弹窗「继续学习」按钮的 hover 底色 */
+    --def-bg: #e6f0e8;
+    --ex-bg: #fdf8e8;
+    --action-btn-bg: #f1f5f9;
+    --tab-study-bg: #fef3c7;
+    --tab-study-border: #f59e0b;
+    --tab-study-fg: #92400e;
+    --tab-review-bg: #d8f3ee;
+    --tab-review-border: #14b8a6;
+    --tab-review-fg: #115e59;
+
+    /* STUDY LAYOUT */
+    --study-bg: #f4ede4;
+    --study-bg-end: #ece4da;
+    --study-sidebar: #ffffff;
+    --study-card-bg: #ffffff;
+    --study-content-bg: #e9f0ec;
+    --study-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    --study-shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.10);
+
+    /* Card content font controls (set from JS; scale text only, not the card box) */
+    --card-font-scale: 1;
+    --card-font-weight: 700;
+    --scale-basic: 1;
+    --scale-def: 1;
+    --scale-example: 1;
+}
+
+/* ===== 1b. Tailwind Preflight 的等价重置（别删） =====
+   本体 <head> 引了 static/vendor/tailwind/tailwind.browser.min.js（**v4**），它的
+   preflight 给整个文档铺了一层基线。本工具**故意不引 Tailwind**（浏览器版会扫描
+   class 现场生成 CSS，会把词卡一起 normalize），于是把这层基线等价手写在这里。
+
+   缺了它实测会差（活体比对 audit_vs_host.js 抓到）：
+     · html line-height 24px ↔ normal → 一排胶囊集体矮 4px
+       （.study-deck-title 35→31 / .stats-text 32→28 / .tab-item 53→49 / .study-tabs 63→59）
+     · 裸 button：padding 0 ↔ 1px 6px · font-size 16 ↔ 13.33 · font-family Inter ↔ Arial
+     · 页签 × 的字重 700 ↔ 400
+   ⚠️ v4 的默认边框色是 currentColor（不是 v3 的 #e5e7eb）。写成灰色会让
+      .sidebar / .study-content / #toast 等**所有没显式设边框色**的元素集体跑偏
+      —— 实测一次就多出 10 条差异。
+   ⚠️ 必须放进 `@layer base`。级联里**层级判定先于特异度**：未分层的样式永远赢过
+   分层里的样式（哪怕分层里的选择器更具体）。Tailwind 的工具类全部住在
+   `@layer utilities` 里，而这份 reset 里的
+       *{ margin:0; padding:0; border:0 solid }
+   会把 px-7 / py-[26px] / mb-4 / border-2 / px-4 这类间距与边框工具类**整体压死**
+   —— 实测皮肤直接塌版（单词顶到纸边、面板没有内边距）。
+
+   分层之后顺序是：base(reset) < theme < components < utilities(工具类) < 未分层(本文件其余规则)。
+   于是：外壳观感不变（外壳样式本来就在未分层里）、工具类拿得到间距、
+   皮肤 CSS（未分层）依旧稳压工具类 —— 正是我们要的三层关系。 */
+@layer theme, base, components, utilities;
+@layer base {
+*, ::before, ::after, ::backdrop, ::file-selector-button {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid;   /* = border-width:0 + border-style:solid + border-color:currentColor */
+}
+html { line-height: 1.5; -webkit-text-size-adjust: 100%; tab-size: 4; }
+body { line-height: inherit; }
+hr { height: 0; color: inherit; border-top-width: 1px; }
+h1, h2, h3, h4, h5, h6 { font-size: inherit; font-weight: inherit; }
+a { color: inherit; text-decoration: inherit; }
+b, strong { font-weight: bolder; }
+small { font-size: 80%; }
+ol, ul, menu { list-style: none; }
+table { text-indent: 0; border-color: inherit; border-collapse: collapse; }
+button, input, optgroup, select, textarea, ::file-selector-button {
+    font: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    border-radius: 0;
+    background-color: transparent;
+    opacity: 1;
+}
+/* ⚠️ 这里**故意没有** `button, [role="button"] { cursor: pointer }`：
+   Tailwind **v4** 的 preflight 把这个 v3 时代的规则删掉了（v4 让 button 走 UA 默认
+   cursor）。带上它，凡是「自己没写 cursor 的按钮」——结课弹窗那两个就是——计算值会变成
+   pointer，而本体是 default。实测（_preview/finish_style.js 读本体 #modal-finish-confirm）
+   本体是 `cursor: default`。工具里所有需要手型的按钮都已经自己写了 cursor: pointer，
+   所以删掉这一条不会被别的元素牵连。 */
+:disabled { cursor: default; }
+img, svg, video, canvas, audio, iframe, embed, object { display: block; vertical-align: middle; }
+img, video { max-width: 100%; height: auto; }
+}   /* ← 结束 @layer base */
+[hidden]:where(:not([hidden="until-found"])) { display: none !important; }
+
+body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--hp-text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    /* 本体 #study-view 的暖米色渐变；小工具没有 app-main，直接铺在 body 上 */
+    background: linear-gradient(135deg, var(--study-bg), var(--study-bg-end));
+}
+
+/* ===== 2. 布局：左栏 + 主区 ===== */
+.layout-row {
+    display: flex;
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 1000px;
+}
+.sidebar {
+    width: 160px;
+    min-width: 160px;
+    background: var(--study-sidebar);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.03);
+}
+.sidebar-content {
+    padding: 4px 8px 12px;
+    overflow-y: auto;
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+/* 品牌按钮。本体用 Tailwind 工具类内联写成
+   （flex items-center justify-center gap-1.5 p-3 rounded-full text-sm font-semibold
+    w-[calc(100%-8px)] my-0.5 mx-1 text-center min-h-[44px] border-0）
+   —— 这里等价展开成一条普通规则，几何逐项相同：gap 6px / padding 12px /
+   radius 9999px / 14px / 600 / calc(100%-8px) / margin 2px 4px / min-height 44px。
+   ⚠️ text-sm 在 Tailwind 里是 font-size 14px **配 line-height 20px**（不是 1.5），
+      少了这一行实测高度 45px、本体是 44px。 */
+.sidebar-brand-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px;
+    border-radius: 9999px;                 /* 兜底（老浏览器不认 calc(infinity*1px)） */
+    border-radius: calc(infinity * 1px);   /* 本体是 rounded-full，实测算出 3.35544e+07px */
+    font-size: 14px;
+    line-height: 20px;                     /* text-sm 的配套行高 */
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--ink-2);
+    white-space: nowrap;
+    width: calc(100% - 8px);
+    margin: 2px 4px;
+    text-align: center;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+}
+.sidebar-brand-btn:hover { background: var(--slate-soft); color: var(--primary); }
+.sidebar-brand-btn.active {
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(15, 118, 110, 0.12);
+}
+
+/* ===== 3. 侧栏页签（pill 风格 + 活跃色条 + 关闭按钮） ===== */
+.study-tabs {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    width: 100%;
+    padding: 2px 0;
+}
+.study-tabs .tab-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 14px 20px;
+    border-radius: 90px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--ink-2);
+    white-space: nowrap;
+    position: relative;
+    width: calc(100% - 8px);
+    margin: 3px 4px;
+    text-align: center;
+    min-height: 48px;
+    border: none;
+    box-sizing: border-box;
+}
+.study-tabs .tab-item:hover {
+    background: var(--slate-soft);
+    color: var(--ink);
+    transform: none;
+}
+.study-tabs .tab-item.active {
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(15, 118, 110, 0.12);
+}
+.study-tabs .tab-item.study-tab { background: var(--tab-study-bg); color: var(--tab-study-fg); }
+.study-tabs .tab-item.study-tab.active {
+    background: var(--tab-study-bg);
+    color: var(--tab-study-fg);
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(234, 179, 8, 0.20);
+    border: 2px solid var(--tab-study-border);
+    box-sizing: border-box;
+}
+.study-tabs .tab-item.study-tab.active::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 22px;
+    border-radius: 3px;
+    background: var(--tab-study-border);
+}
+.study-tabs .tab-item.review-tab { background: var(--tab-review-bg); color: var(--tab-review-fg); }
+.study-tabs .tab-item.review-tab.active {
+    background: var(--tab-review-bg);
+    color: var(--tab-review-fg);
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.20);
+    border: 2px solid var(--tab-review-border);
+    box-sizing: border-box;
+}
+.study-tabs .tab-item.review-tab.active::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 22px;
+    border-radius: 3px;
+    background: var(--tab-review-border);
+}
+.study-tabs .tab-close-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 16px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: inherit;
+    opacity: 0.6;
+    padding: 0;
+    line-height: 1;
+    transition: all 0.15s;
+}
+.study-tabs .tab-item:hover .tab-close-btn { display: flex; }
+.study-tabs .tab-close-btn:hover { opacity: 1; background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.shake { animation: shake 0.3s; }
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+}
+
+/* ===== 4. 主区 / 滚动容器 ===== */
+.main-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+#study-pages-container { flex: 1; min-height: 0; }
+.study-page { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 16px 20px; }
+/* 卡片间距**由皮肤自己给**（每张卡 margin-bottom:16px，和本体一致）。
+   ⚠️ 这里不要再给 .enter 加 margin-bottom：.study-page 是 flex 容器，flex item
+   自成 BFC ⇒ 子元素的 margin 不会与 .enter 的外边距合并，两边都写就变成 32px 双倍间距。
+   （旧版 coca-cards 就是两边都写了。） */
+.study-page > .enter { margin-bottom: 0; animation: cardIn 0.5s both; }
+
+/* 首次进入某一页时的逐张入场。
+   旧版把这套动画挂在皮肤内的 .word-card.enter 上，而 .enter 其实在外层包装 div 上，
+   @keyframes cardIn 也没人定义 —— 所以那条入场动画从来没生效过；这里补上真的那条。
+   （每张卡的 animation-delay 由 renderStudyPage 写在内联样式里。） */
+@keyframes cardIn {
+    from { opacity: 0; transform: translateY(14px) scale(0.99); }
+    to   { opacity: 1; transform: none; }
+}
+
+.study-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--study-content-bg);
+    display: flex;
+    flex-direction: column;
+}
+.study-scroll::-webkit-scrollbar { width: 10px; }
+.study-scroll::-webkit-scrollbar-track { background: transparent; }
+.study-scroll::-webkit-scrollbar-thumb {
+    background: var(--primary-light, #14b8a6);
+    border-radius: 6px;
+    border: 2px solid var(--study-content-bg);
+}
+.study-scroll::-webkit-scrollbar-thumb:hover { background: var(--primary, #0f766e); }
+.study-scroll::-webkit-scrollbar-thumb:active { background: var(--primary-dark, #115e59); }
+.study-content {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+    flex: 1;
+    min-height: 0;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: safe center;
+}
+
+/* ===== 5. 学习 top-bar ===== */
+.study-top-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 20px;
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+    background: var(--study-sidebar);
+    flex-wrap: wrap;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.03);
+}
+.study-deck-title {
+    display: inline-flex;
+    align-items: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary-dark);
+    background: var(--primary-soft);
+    padding: 6px 18px;
+    border-radius: 90px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(15, 118, 110, 0.12);
+}
+.top-btn {
+    width: 38px;
+    height: 38px;
+    border: none;
+    background: transparent;
+    color: var(--ink-3);
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.top-btn:hover { background: var(--slate-soft); color: var(--ink); transform: translateY(-1px); }
+.top-btn:active { transform: scale(0.92); }
+.top-btn svg { width: 22px; height: 22px; }
+.top-btn i { font-size: 22px; }
+.top-btn.active { background: var(--primary-soft); color: var(--primary); }
+.stats-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 90px;
+    background: var(--btn-bg);
+    border: 1px solid var(--line-2);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-2);
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.stats-text:hover {
+    border-color: var(--primary-light);
+    color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(15, 118, 110, 0.10);
+}
+
+/* ===== 6. 目录页网格 ===== */
+#catalogue-view { padding: 16px 20px; }
+#catalogue-grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 22px 16px; }
+.page-btn {
+    padding: 14px 0;
+    border-radius: 12px;
+    font-size: 17px;
+    font-weight: 700;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line-2);
+    cursor: pointer;
+    color: var(--ink-2);
+    min-height: 44px;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s, border-color 0.2s;
+}
+.page-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(15, 118, 110, 0.08); border-color: var(--primary-light); }
+.page-btn:active { transform: scale(0.92); }
+.page-btn.marked { background: var(--tab-study-bg); border-color: var(--tab-study-border); color: var(--tab-study-fg); }
+.page-btn.mastered { background: var(--tab-review-bg); border-color: var(--tab-review-border); color: var(--tab-review-fg); }
+
+/* ===== 7. 单卡模式 ===== */
+.single-card-stage {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    flex: 1;
+    min-height: 0;
+}
+.sc-main { flex: 1; min-width: 0; display: flex; justify-content: center; align-items: center; }
+.sc-nav-col { display: flex; flex-direction: column; align-items: center; gap: 14px; flex-shrink: 0; }
+/* 固定、不动的卡盒：高度恒定（600px，矮屏按视口收敛），切卡只换内部内容，
+   盒子永不重算尺寸 —— 这是本体那条注释，别删。 */
+.sc-card-wrap {
+    width: 100%;
+    max-width: 785px;
+    margin: 0 auto;
+    height: min(760px, calc(100vh - 140px));
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px;
+    background: transparent;
+    overflow: hidden;
+}
+/* 模板渲染出来的卡是唯一可见的卡：wrap 只是固定尺寸的透明容器，
+   所以不会出现「背后叠一张白卡」。 */
+.sc-card-wrap > [data-card-id] { flex: 1; min-height: 0; overflow-y: auto; margin-bottom: 0; }
+.sc-card-wrap > [data-card-id]:hover { transform: none; }
+.sc-nav {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--btn-bg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-2);
+    transition: all 0.2s;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.sc-nav:hover { background: var(--slate-soft); color: var(--primary); border-color: var(--primary-light); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(15, 118, 110, 0.12); }
+.sc-nav:active { transform: scale(0.92); }
+.sc-progress { text-align: center; font-size: 13px; color: var(--ink-3); font-weight: 600; margin: 0; min-width: 20px; }
+.sc-anim { animation: scFlash 0.28s ease; }
+@keyframes scFlash {
+    0% { opacity: 0; transform: translateY(10px) scale(0.97); }
+    60% { opacity: 1; }
+    100% { opacity: 1; transform: none; }
+}
+
+/* ===== 8. 皮肤下拉（切词卡样式；外观照抄本体的皮肤下拉） ===== */
+/* 占的是本体「返回主页」按钮（.study-back-btn）那一格。本体那儿有一条
+   `.study-back-btn { margin-right: 4px }`（static/styles.css:946），
+   少了这 4px，后面标题胶囊的 x 就比本体靠左 4px。 */
+.skin-toggle-wrap { position: relative; margin-right: 4px; }
+.skin-dropdown {
+    position: absolute;
+    z-index: 200;
+    width: 200px;
+    background: var(--dropdown-bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+}
+.skin-dropdown-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-2);
+}
+.skin-list { padding: 4px; max-height: 220px; overflow-y: auto; }
+.skin-option {
+    padding: 8px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.15s;
+}
+.skin-option:hover { background: var(--slate-soft); }
+.skin-option.active { background: var(--primary-soft); color: var(--primary); }
+.skin-option i { width: 16px; text-align: center; }
+
+/* ===== 9. 音色下拉 ===== */
+.control-group { position: relative; }
+.voice-dropdown {
+    position: absolute;
+    z-index: 100;
+    width: 220px;
+    background: var(--dropdown-bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+}
+.voice-dropdown-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--line); color: var(--ink-2); }
+.voice-list { max-height: 200px; overflow-y: auto; }
+.voice-group-header { padding: 6px 12px 2px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-3); background: var(--slate-soft); position: sticky; top: 0; }
+.voice-option { padding: 8px 12px; font-size: 12px; cursor: pointer; transition: background 0.15s; }
+.voice-option.muted { cursor: default; color: var(--ink-3); font-style: italic; }
+.voice-option:hover { background: var(--slate-soft); }
+.voice-option.active { background: var(--primary-soft); color: var(--primary); }
+
+/* ===== 10. 字体抽屉 ===== */
+.font-drawer {
+    position: fixed;
+    z-index: 200;
+    width: 180px;
+    background: var(--dropdown-bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    padding: 10px 12px;
+}
+.font-drawer .setting-item { margin-bottom: 10px; }
+.font-drawer .setting-item label { display: block; font-size: 11px; color: var(--ink-3); margin-bottom: 4px; }
+.font-drawer .setting-item .control { display: flex; align-items: center; gap: 6px; }
+.font-drawer .setting-item button {
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: var(--btn-bg);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+}
+.font-drawer .setting-item button:hover { background: #ecfdf5; border-color: var(--primary-soft); color: var(--primary); }
+.font-drawer .setting-item .value { font-size: 12px; color: var(--ink); min-width: 32px; text-align: center; }
+.reset-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 6px;
+    border: none;
+    background: #ecfdf5;
+    color: var(--primary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* ===== 11. Tooltip（本体 static/app.js 那套自绘提示） ===== */
+#global-tooltip {
+    position: fixed;
+    padding: 5px 12px;
+    background: rgba(15, 23, 42, 0.95);
+    color: #f1f5f9;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 7px;
+    white-space: nowrap;
+    z-index: 99999;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+#global-tooltip.show { opacity: 1; visibility: visible; }
+
+/* ===== 12. Toast（照抄本体 static/styles.css:1385 的 .toast，逐条） ===== */
+.toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--ink);
+    color: #fff;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+    pointer-events: none;
+    white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.error { background: var(--unknown); }
+
+.empty-state { text-align: center; color: var(--ink-3); padding: 60px 20px; font-size: 14px; }
+
+/* ===== 13. 结课弹窗 Finish Modal =====
+   本体：`templates/index.html:236` 的 `#finish-modal` + `static/styles.css:1190` 的
+   `.modal-overlay` / `.modal`。触发点：点侧栏页签的 ×（本体 `app.js:3263` →
+   `showFinishModal(tabId)`），弹窗里显示本页「总计 / 未掌握」张数，确认才真的关页签。
+
+   ⚠️ 本体这段 markup 用的是 Tailwind 工具类；本工具**不引 Tailwind**，所以下面把每个
+   utility **逐条展开**成等价规则。数值**全部是实测出来的**（`_preview/finish_style.js`
+   打开本体页面直接读 getComputedStyle，`finish_hover.js` 读 :hover），不是凭记忆写的
+   —— Tailwind v4 的调色板是 oklch，手写 hex 一定会差一点。括号里标注本体对应的类名。 */
+.modal-overlay {                                   /* .modal-overlay */
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+    animation: modalFadeIn 0.2s ease;
+}
+.modal {                                           /* .modal */
+    background: var(--modal-bg); border-radius: 16px; padding: 0;
+    width: 320px; max-width: 90vw;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    animation: modalScaleIn 0.25s ease;
+}
+@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modalScaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+
+.finish-hero {                                     /* text-center pt-8 pb-4 px-8 */
+    text-align: center; padding: 32px 32px 16px;
+}
+.finish-badge {                                    /* w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 */
+    width: 64px; height: 64px;
+    background-color: oklch(0.962 0.044 156.743);   /* bg-green-100 */
+    border-radius: 9999px;                          /* rounded-full：兜底值 */
+    border-radius: calc(infinity * 1px);            /* 本体实测算出 3.35544e+07px */
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+}
+.finish-badge i {                                  /* text-3xl text-green-600 */
+    font-size: 30px; line-height: 1;                /* line-height:1 → 30px，与本体实测一致 */
+    color: oklch(0.627 0.194 149.214);              /* text-green-600 */
+}
+.finish-title {                                    /* text-2xl font-bold text-[var(--hp-text)] mb-2 */
+    font-size: 24px; line-height: 32px; font-weight: 700;
+    color: var(--hp-text); margin-bottom: 8px;
+}
+#finish-subtitle {                                 /* text-sm text-[var(--ink-3)] */
+    font-size: 14px; line-height: 20px; color: var(--ink-3);
+}
+.finish-stats {                                    /* grid grid-cols-2 gap-4 px-8 pb-6 */
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px; padding: 0 32px 24px;
+}
+.finish-stat {                                     /* bg-[var(--slate-soft)] p-5 rounded-xl text-center */
+    background: var(--slate-soft); padding: 20px; border-radius: 12px; text-align: center;
+}
+.finish-stat-num {                                 /* text-3xl font-bold text-[var(--hp-text)] */
+    font-size: 30px; line-height: 36px; font-weight: 700; color: var(--hp-text);
+}
+.finish-stat-num.unknown { color: var(--unknown); } /* text-[var(--unknown)] */
+.finish-stat-label {                               /* text-sm text-[var(--ink-3)] mt-1 */
+    font-size: 14px; line-height: 20px; color: var(--ink-3); margin-top: 4px;
+}
+.finish-actions {                                  /* flex gap-4 px-8 pb-8 */
+    display: flex; gap: 16px; padding: 0 32px 32px;
+}
+/* 两个按钮的共同部分：flex-1 py-4 rounded-full text-base font-semibold transition-colors
+   cursor 走 UA 默认（default）—— 本体没给这两个按钮写 cursor，preflight v4 也不加，
+   实测就是 default。别顺手加 cursor:pointer，那就不一样了。 */
+#modal-finish-cancel, #modal-finish-confirm {
+    flex: 1 1 0%;
+    padding: 16px 0;
+    border-radius: 9999px;
+    border-radius: calc(infinity * 1px);
+    font-size: 16px; line-height: 24px; font-weight: 600;
+    text-align: center;
+    /* ⚠️ 必须是 `0 solid` 而不是 `0`：`border: 0` 会把 border-style 写成 none，
+       而本体的边框来自 preflight 的 `border: 0 solid`（style=solid, color=currentColor），
+       实测计算值就是 solid。写成 `0` 会多出一条差异（finish_parity.js 抓到）。 */
+    border: 0 solid;
+    transition-property: color, background-color, border-color, outline-color,
+                         text-decoration-color, fill, stroke,
+                         --tw-gradient-from, --tw-gradient-via, --tw-gradient-to;  /* = Tailwind v4 的 transition-colors（实测就是这一串） */
+    transition-duration: .15s;
+    transition-timing-function: cubic-bezier(.4, 0, .2, 1);
+}
+#modal-finish-cancel {                             /* bg-[var(--slate-soft)] text-[var(--ink-2)] hover:bg-[var(--hp-border)] */
+    background-color: var(--slate-soft);
+    color: var(--ink-2);
+}
+#modal-finish-cancel:hover { background-color: var(--hp-border); }   /* 实测 rgb(208,215,222) */
+#modal-finish-confirm {                            /* bg-green-600 text-white hover:bg-green-700 */
+    background-color: oklch(0.627 0.194 149.214);
+    color: #fff;
+}
+#modal-finish-confirm:hover { background-color: oklch(0.527 0.154 150.069); }  /* green-700 */

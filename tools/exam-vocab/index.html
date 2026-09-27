@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam Vocabulary</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+
+  <!-- Tailwind：由本体本地提供（见 dragoncard-tool-builder/references/vendor.md），
+       同源绝对路径、离线可用，不需要打进 zip。
+
+       ⚠️ **不要自己写 `<style type="text/tailwindcss">`**。实测：在里面写
+          `@import "tailwindcss"` 或 `@import "tailwindcss/theme" layer(theme)`
+          都不会被内联，会被原样留在产物里，浏览器再去取 /tailwindcss、
+          /tailwindcss/theme、/tailwindcss/utilities → 一串 404。
+          留空反而正确：构建发现没有 style 块时会用**它自己的**默认导入，
+          那条路径是内联的，全程零请求。
+
+       ⚠️ preflight 会随默认导入一起被引进来，但落在 `@layer base` 里。
+          CSS 级联里**未分层的样式永远赢过分层里的样式**，而 app.css 的基线
+          reset 是未分层的 ⇒ preflight 在本页形同不存在，不会二次重置。
+          同理，皮肤 CSS（未分层）也永远压过 Tailwind 工具类（分层），
+          这正是我们要的：布局/间距/任意值用工具类，缩放与观感归皮肤 CSS。
+
+       工具类由浏览器构建在运行时扫描 DOM 按需生成（自带 MutationObserver），
+       所以皮肤 render() 里拼出来的类名一样会被编译。 -->
+  <script src="/static/vendor/tailwind/tailwind.browser.min.js"></script>
+
+  <!-- 三个皮肤（standard 通用 / journal 手帐 / space 太空站）。
+       三份 CSS 全部常驻加载，靠各自的根类名（.skin-standard 等）隔离，
+       不做 link.disabled 开关 —— Safari 对 link.disabled 支持不稳，而且常驻
+       反而让「换皮肤＝换个 render 函数」变得无状态、可回退。
+       ⚠️ 顺序要紧：皮肤在前、app.css 在后。
+       app.css 里 `.sc-card-wrap > [data-card-id]:hover { transform: none }`
+       （单卡模式下卡盒恒定、不许位移）与皮肤的 .skin-x:hover{translateY}
+       同特异性，靠**后出现者胜**生效 —— 反过来皮肤会把单卡模式的卡顶起来。 -->
+  <link rel="stylesheet" href="assets/skins/standard.css">
+  <link rel="stylesheet" href="assets/skins/journal.css">
+  <link rel="stylesheet" href="assets/skins/space.css">
+
+  <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+  <div class="layout-row">
+    <aside class="sidebar">
+      <div class="sidebar-content">
+        <button id="sidebar-home-btn" class="sidebar-brand-btn active" data-tooltip="Catalogue">
+          <i class="fa-solid fa-dragon"></i>
+          <span>DragonCard</span>
+        </button>
+        <div class="study-tabs" id="study-tabs-container"></div>
+      </div>
+    </aside>
+    <div class="main-content">
+      <div class="study-top-bar">
+        <!-- 工具独有：切词卡皮肤（Standard / Journal / Space Station）。放在最左侧。 -->
+        <div class="skin-toggle-wrap" id="skin-toggle-wrap">
+          <button id="style-btn" class="top-btn" data-tooltip="Skin"><i class="fa-solid fa-palette"></i></button>
+          <div class="skin-dropdown" id="style-dropdown" style="display:none;">
+            <div class="skin-dropdown-header"><i class="fa-solid fa-palette"></i> <span>Skin</span></div>
+            <div class="skin-list" id="style-list"></div>
+          </div>
+        </div>
+        <span id="study-deck-title" class="study-deck-title"></span>
+        <span style="flex:1"></span>
+        <button id="font-settings-btn" class="top-btn" data-tooltip="Font size">
+          <i class="fa-solid fa-font"></i>
+        </button>
+        <div class="control-group">
+          <button class="top-btn voice-select-btn" data-tooltip="Voice">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+          <div class="voice-dropdown" style="display:none;">
+            <div class="voice-dropdown-header">Select Voice</div>
+            <div class="voice-list"></div>
+          </div>
+        </div>
+        <button class="top-btn" id="scroll-top-btn" data-tooltip="Scroll to Top">
+          <i class="fa-solid fa-arrow-up"></i>
+        </button>
+        <button class="top-btn" id="scroll-bottom-btn" data-tooltip="Scroll to Bottom">
+          <i class="fa-solid fa-arrow-down"></i>
+        </button>
+        <button id="card-view-btn" class="top-btn" data-tooltip="Single Card">
+          <i class="fa-solid fa-grip"></i>
+        </button>
+        <button id="refresh-stats" class="stats-text" data-tooltip="Refresh">
+          <i class="fa-solid fa-arrows-rotate"></i>
+          <span>0 / 0</span>
+        </button>
+      </div>
+      <div class="study-scroll" id="study-scroll">
+        <div class="study-content">
+          <div id="catalogue-view"><div id="catalogue-grid"></div></div>
+          <div id="study-pages-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="font-drawer" class="font-drawer" style="display:none;">
+    <div class="setting-item">
+      <label>Font size</label>
+      <div class="control">
+        <button id="font-size-minus">&minus;</button>
+        <span id="font-size-value" class="value">100%</span>
+        <button id="font-size-plus">+</button>
+      </div>
+    </div>
+    <button id="reset-fonts" class="reset-btn">Reset</button>
+  </div>
+
+  <!-- 结课弹窗：点侧栏页签的 × 会弹它（与本体 templates/index.html 同款）。 -->
+  <div id="finish-modal" class="modal-overlay" style="display:none;">
+    <div class="modal" style="width:380px;">
+      <div class="finish-hero">
+        <div class="finish-badge"><i class="fa-solid fa-check"></i></div>
+        <div class="finish-title">Finish Study?</div>
+        <div id="finish-subtitle">Review your progress</div>
+      </div>
+      <div class="finish-stats">
+        <div class="finish-stat">
+          <div id="finish-total" class="finish-stat-num">0</div>
+          <div class="finish-stat-label">Total</div>
+        </div>
+        <div class="finish-stat">
+          <div id="finish-marked" class="finish-stat-num unknown">0</div>
+          <div class="finish-stat-label">Unknown</div>
+        </div>
+      </div>
+      <div class="finish-actions">
+        <button id="modal-finish-cancel">Keep studying</button>
+        <button id="modal-finish-confirm">Finish</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="global-tooltip" class="action-btn-tooltip"></div>
+  <div id="toast" class="toast"></div>
+
+  <!-- 皮肤渲染函数必须先于 app.js：app.js 初始化时就要读 window.EXAM_SKINS -->
+  <script src="assets/skins/standard.js"></script>
+  <script src="assets/skins/journal.js"></script>
+  <script src="assets/skins/space.js"></script>
+  <!-- 3D 行星：全局只有一个 WebGL 上下文，canvas 由最该显示 3D 的那张卡认领。
+       放在皮肤之后（skin 只声明 data-planet3d 卡位，不直接依赖它）。 -->
+  <script src="assets/planet3d.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

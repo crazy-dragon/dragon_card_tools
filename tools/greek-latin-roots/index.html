@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Greek &amp; Latin Roots</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='4' y='4' width='92' height='92' rx='20' fill='%235a7d94'/><text x='50' y='73' font-size='62' font-family='Georgia,serif' text-anchor='middle' fill='white'>&#945;</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="assets/app.css">
+  <link rel="stylesheet" href="assets/cards.css">
+  <script>
+    /* Greek & Latin Roots —— 152 cards = 82 Latin + 70 Greek, 597 derivatives.
+       One view only: a single column of double-sided cards (no table view, so no
+       segmented control, no eye button).  Front = the root, large; tap or Flip to
+       reveal meaning + derivatives (TOP500 / TOP2k / SUPP) + an etymology note.
+       ❗ English-only product: every string in this tool is English (CJK = 0). */
+    window.DC_TOOL = {
+      title: 'Greek & Latin Roots',
+      voiceLang: 'en'
+    };
+  </script>
+</head>
+<body>
+  <div class="layout-row">
+    <div class="main-content">
+      <div class="study-top-bar">
+        <span id="study-deck-title" class="study-deck-title"></span>
+        <span style="flex:1"></span>
+        <button id="font-settings-btn" class="top-btn" data-tooltip="Text size">
+          <i class="fa-solid fa-font"></i>
+        </button>
+        <div class="control-group">
+          <button class="top-btn voice-select-btn" data-tooltip="Reading voice">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+          <div class="voice-dropdown" style="display:none;">
+            <div class="voice-dropdown-header">Voice &middot; English</div>
+            <div class="voice-list"></div>
+          </div>
+        </div>
+        <button class="top-btn" id="scroll-top-btn" data-tooltip="Back to top">
+          <i class="fa-solid fa-arrow-up"></i>
+        </button>
+        <button class="top-btn" id="scroll-bottom-btn" data-tooltip="To bottom">
+          <i class="fa-solid fa-arrow-down"></i>
+        </button>
+        <button id="card-view-btn" class="top-btn" data-tooltip="Single card">
+          <i class="fa-solid fa-grip"></i>
+        </button>
+        <div class="skin-toggle-wrap" id="skin-toggle-wrap">
+          <button id="style-btn" class="top-btn" data-tooltip="Skin">
+            <i class="fa-solid fa-palette"></i>
+          </button>
+          <div class="skin-dropdown" id="style-dropdown" style="display:none;">
+            <div class="skin-dropdown-header"><i class="fa-solid fa-palette"></i> <span>Skin</span></div>
+            <div class="skin-list" id="style-list"></div>
+          </div>
+        </div>
+        <button id="refresh-stats" class="stats-text" data-tooltip="Refresh">
+          <i class="fa-solid fa-arrows-rotate"></i>
+          <span>0 / 0</span>
+        </button>
+      </div>
+      <div class="study-scroll" id="study-scroll">
+        <div class="study-content">
+          <div id="study-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="font-drawer" class="font-drawer" style="display:none;">
+    <div class="setting-item">
+      <label>Text size</label>
+      <div class="control">
+        <button id="font-size-minus">&minus;</button>
+        <span id="font-size-value" class="value">100%</span>
+        <button id="font-size-plus">+</button>
+      </div>
+    </div>
+    <button id="reset-fonts" class="reset-btn">Reset</button>
+  </div>
+
+  <div id="global-tooltip" class="action-btn-tooltip"></div>
+  <div id="toast" class="toast"></div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

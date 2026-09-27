@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COCA20000</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="assets/app.css">
+  <style id="style-jade">
+/* ==========================================================================
+   English Word Card · 轻立体 + 翡翠（在原有布局上只换外观）
+   --------------------------------------------------------------------------
+   · 版式/尺寸/DOM 与原模板一致：44px 圆钮 · 14px 18px 内边距 · 16px 圆角 ·
+     260px 最小高 · 4px 左脊 · 单块 .definition · 例句区 · 各字段字号公式。
+     本次只改：颜色、描边、投影、渐变、文本色。
+   · 颜色全部走 --ew-* 变量；暗色皮肤只重映射变量，规则一条不改。
+   · 配色 = 简化版同款「乙 · 翡翠」：主色 emerald #059669 → cyan #0891b2。
+   ========================================================================== */
+
+/* ---------- 1. 卡面：轻浮起 + 右上角淡主色光晕 + 左侧双色渐变脊 ---------- */
+.word-card {
+
+  /* --- 版式（与原模板逐字一致，未改） --- */
+  border-radius: 16px;
+  padding: 14px 18px;
+  min-height: 260px; display: flex; flex-direction: column;
+  transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+  margin-bottom: 16px;
+
+  /* --- 配色 token --- */
+  --ew-h1:#059669; --ew-h2:#0891b2;                    /* 主色 / 第二色 */
+  /* 内容倍率：徽章/音标胶囊这类「跟着字走」的盒子用它换算尺寸 */
+  --ew-idx: calc(var(--scale-basic, 1) * var(--card-font-scale, 1));
+  --ew-h1-deep:#065f46; --ew-h1-soft:#ecfdf5;
+  --ew-h1-sh:rgba(5,150,105,.34);
+  --ew-ink:#065f46;                                    /* 单词 */
+  --ew-warm-ink:#9a3412;                               /* 中文释义：暖色墨水 */
+  --ew-def-bg:#f4faf8; --ew-def-bar:#059669;
+  --ew-ex-bg:#fefaf0;  --ew-ex-bar:#f0b429;
+  --ew-divider:linear-gradient(90deg,rgba(5,150,105,.30) 0%,rgba(8,145,178,.12) 55%,rgba(15,23,42,0) 100%);
+  --ew-c1:#ffffff; --ew-c2:#fcfdff;
+  --ew-card-line:rgba(15,23,42,.07);
+  --ew-card-sh:0 1px 2px rgba(15,23,42,.045),0 10px 22px -15px rgba(15,23,42,.26);
+  --ew-card-sh-up:0 2px 4px rgba(15,23,42,.05),0 18px 32px -18px rgba(15,23,42,.32);
+  --ew-btn-line:#e2e8f0; --ew-btn-sh:0 1.5px 3px rgba(15,23,42,.07);
+  --ew-play:#059669; --ew-play-bg:#ecfdf5; --ew-play-line:#a7f3d0; --ew-play-sh:rgba(5,150,105,.30);
+  --ew-eye:#0891b2;  --ew-eye-bg:#ecfeff;  --ew-eye-line:#a5f3fc;  --ew-eye-sh:rgba(8,145,178,.30);
+  --ew-mark:#e11d48; --ew-mark-bg:#fff1f2; --ew-mark-line:#fecdd3; --ew-mark-sh:rgba(225,29,72,.30);
+  --ew-fav:#d97706;  --ew-fav-bg:#fffbeb;  --ew-fav-line:#fde68a;  --ew-fav-sh:rgba(217,119,6,.30);
+
+  /* --- 外观 ---
+     左脊 = 4px 透明边框 + 背景渐变条。border-left 原本就是 4px，
+     所以盒子几何与原来**完全一致**，只是纯色换成了渐变。 */
+  background:
+    linear-gradient(180deg,var(--ew-h1) 0%,var(--ew-h2) 100%) left top / 4px 100% no-repeat,
+    radial-gradient(125% 100% at 100% 0%, var(--ew-h1-soft) 0%, rgba(255,255,255,0) 60%),
+    linear-gradient(180deg,var(--ew-c1) 0%,var(--ew-c2) 100%);
+  border: 1px solid var(--ew-card-line);
+  border-left: 4px solid transparent;
+  box-shadow: var(--ew-card-sh);
+
+}
+.word-card:hover {
+
+  transform: translateY(-3px);                 /* 与原模板一致 */
+  box-shadow: var(--ew-card-sh-up);
+  border-color: var(--ew-card-line);           /* 不再换成 --primary-soft，免得抢左脊 */
+
+}
+.word-card.highlighted {
+
+  background:
+    linear-gradient(180deg,#e11d48 0%,#f43f5e 100%) left top / 4px 100% no-repeat,
+    radial-gradient(125% 100% at 100% 0%, rgba(244,63,94,.10) 0%, rgba(255,255,255,0) 60%),
+    linear-gradient(180deg,#fff8f9 0%,#fffdfd 100%);
+
+}
+.word-card:active {
+ transform: scale(0.99); 
+}
+.word-card.enter {
+ animation: cardIn 0.5s both; 
+}
+@keyframes cardIn {
+
+  from { opacity: 0; transform: translateY(14px) scale(0.99); }
+  to   { opacity: 1; transform: none; }
+
+}
+/* ---------- 2. 头部：序号徽章 / 单词 / 音标药丸 ---------- */
+/* .card-header / .word-basic 的行距、间距、字号公式一律不动 */
+.card-header {
+ display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; 
+}
+.word-basic {
+ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; 
+}
+/* 序号徽章是一枚"胶囊"，它的尺寸必须跟着字号走。
+   字号乘了 --card-font-scale，盒子却写死 20px 高 —— 160% 时 19.2px 的字塞进 20px
+   的盒子里，基线被挤到盒底，数字看着像"错位"，圆角还会切到笔画。
+   这里把 字号/高/最小宽/内边距/圆角/字距 全部交给同一个倍率 --ew-idx 驱动：
+   倍率在 100% 时正好等于 1（逐项等于原值，几何零变化），放大时整枚徽章等比放大。 */
+.word-index {
+
+  display: inline-grid; place-items: center; flex: 0 0 auto;
+  min-width: calc(22px * var(--ew-idx));
+  height: calc(20px * var(--ew-idx));
+  padding: 0 calc(6px * var(--ew-idx));
+  border-radius: calc(7px * var(--ew-idx));
+  color: #fff; font-weight: 800; letter-spacing: calc(.3px * var(--ew-idx));
+  background: linear-gradient(135deg,var(--ew-h1) 0%,var(--ew-h2) 100%);
+  box-shadow: 0 3px 8px -2px var(--ew-h1-sh);
+  font-size: calc(12px * var(--ew-idx));
+
+}
+.word-title {
+
+  font-weight: var(--card-font-weight, 700); color: var(--ew-ink); letter-spacing: -0.3px;
+  font-size: calc(22px * var(--scale-basic, 1) * var(--card-font-scale, 1));
+
+}
+.word-phonetic {
+
+  color: var(--ew-h1-deep); background: var(--ew-h1-soft);
+  border-radius: 9999px;
+  padding: calc(1px * var(--ew-idx)) calc(9px * var(--ew-idx)); font-weight: 600;
+  font-size: calc(13px * var(--scale-basic, 1) * var(--card-font-scale, 1));
+
+}
+/* ---------- 3. 按钮：四个动作四种语义色，浅底描边 → hover 实心 ---------- */
+/* 按钮 44px 不变；只在应用字号被调大时跟着放大（默认 100% 时 = 44px，几何不变） */
+/* 缩放曲线：**与文字同比例**（2026-09-21 用户拍板）。
+   --card-font-scale 的有效范围是 0.8~1.8（app.js: state.fontSize，步进 0.1），
+   所以这里直接取它本身；下限仍 clamp 到 1（缩小时按钮不跟着缩，只放大不缩小）。
+   旧公式 (s-1)*.55+1、上限 1.45 斜率太缓：150%→1.275、160%→1.33，
+   图标 22.95px→23.94px 只长 1px，肉眼几乎看不出放大。
+   下方简化版 .action-btn 里的曲线与此**逐字相同**，改一处务必改另一处。 */
+.word-card {
+ --ew-scale: clamp(1, var(--card-font-scale, 1), 1.8); --ew-btn: calc(44px*var(--ew-scale)); 
+}
+.actions {
+ display: flex; gap: 10px; 
+}
+.action-btn {
+
+  cursor: pointer;
+  width: var(--ew-btn); height: var(--ew-btn);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 90px; background: #ffffff; color: var(--ink-3, #64748b);
+  border: 1.5px solid var(--ew-btn-line);
+  box-shadow: var(--ew-btn-sh), inset 0 1px 0 rgba(255,255,255,.9);
+  transition: transform .16s cubic-bezier(.2,.7,.3,1), box-shadow .16s,
+              background .16s, color .16s, border-color .16s;
+
+}
+.action-btn svg {
+ width: 28px; height: 28px; 
+}
+.action-btn svg, .action-btn i {
+ transition: transform 0.18s; 
+}
+/* 光学居中：**不需要补偿**。
+   模板里原本写的是 transform: translateY(.125em)（act-mark .077em / act-fav .127em），
+   2026-09-21 用像素级探针（_preview/button_ink.js + ink_measure.py，3 倍分辨率截按钮、
+   按「与底色差异」求字形墨迹重心）实测：那条补偿把图标整体**压低 2.3px**，
+   去掉后重心落在 +0.2px（100%）/−0.7px（160%）。
+   星形图标自身重心偏高约 −0.07em（180% 时约 2px），属字形本身，不再额外补偿。
+   → 别再凭肉眼把 translateY 加回来；要验就重跑上面两个脚本。
+   ⚠️ 模板 template.json 里这段注释是同一份结论，改这里记得同步那边（css_parity.py 可验）。 */
+.action-btn i {
+ display: block; line-height: 1; font-size: calc(18px * var(--ew-scale)); 
+}
+.action-btn:hover {
+ transform: translateY(-2px); 
+}
+.action-btn:hover svg {
+ transform: scale(1.12); 
+}
+.action-btn:active {
+ transform: scale(0.88); 
+}
+.action-btn.act-play {
+ color: var(--ew-play); background: var(--ew-play-bg); border-color: var(--ew-play-line); 
+}
+.action-btn.act-eye {
+ color: var(--ew-eye);  background: var(--ew-eye-bg);  border-color: var(--ew-eye-line); 
+}
+.action-btn.act-mark {
+ color: var(--ew-mark); background: var(--ew-mark-bg); border-color: var(--ew-mark-line); 
+}
+.action-btn.act-fav {
+ color: var(--ew-fav);  background: var(--ew-fav-bg);  border-color: var(--ew-fav-line); 
+}
+.action-btn.act-play:hover {
+ background: var(--ew-play); color: #fff; border-color: var(--ew-play);
+                             box-shadow: 0 7px 15px -4px var(--ew-play-sh); 
+}
+.action-btn.act-eye:hover {
+ background: var(--ew-eye);  color: #fff; border-color: var(--ew-eye);
+                             box-shadow: 0 7px 15px -4px var(--ew-eye-sh); 
+}
+.action-btn.act-mark:hover {
+ background: var(--ew-mark); color: #fff; border-color: var(--ew-mark);
+                             box-shadow: 0 7px 15px -4px var(--ew-mark-sh); 
+}
+.action-btn.act-fav:hover {
+ background: var(--ew-fav);  color: #fff; border-color: var(--ew-fav);
+                             box-shadow: 0 7px 15px -4px var(--ew-fav-sh); 
+}
+.action-btn.act-mark.is-active {
+ background: var(--ew-mark); border-color: var(--ew-mark); color: #fff;
+                                 box-shadow: 0 5px 13px -3px var(--ew-mark-sh); 
+}
+.action-btn.act-fav.is-active {
+ background: var(--ew-fav);  border-color: var(--ew-fav);  color: #fff;
+                                 box-shadow: 0 5px 13px -3px var(--ew-fav-sh); 
+}
+.action-btn.act-eye.is-active {
+ background: var(--ew-eye);  border-color: var(--ew-eye);  color: #fff;
+                                 box-shadow: 0 5px 13px -3px var(--ew-eye-sh); 
+}
+/* ---------- 4. 释义块（单块，中英同宽同起点） ---------- */
+/* 左侧那道色条用 inset 阴影画，不占盒宽 → 文本起点与原来一模一样 */
+.definition {
+
+  margin-bottom: 6px; padding: 6px 8px; border-radius: 8px;
+  background: var(--ew-def-bg);
+  box-shadow: inset 3px 0 0 var(--ew-def-bar);
+
+}
+/* 未标记的卡：英文与中文两个 div 都是 .hide（cardJs 的偷看逻辑），
+   但块本身还在 —— 空块上画那条色条会变成一个奇怪的小钩子，所以有内容才画。
+   （不收缩高度：这样标记/取消标记时卡片高度不跳。） */
+.definition:not(:has(> div:not(.hide))) {
+ background: none; box-shadow: none; 
+}
+.def-en {
+
+  color: var(--ink, #1d1d1d); line-height: 1.4; margin-bottom: 3px;
+  font-size: calc(13px * var(--scale-def, 1) * var(--card-font-scale, 1));
+
+}
+.def-cn {
+
+  color: var(--ew-warm-ink); line-height: 1.4;
+  font-size: calc(13px * var(--scale-def, 1) * var(--card-font-scale, 1));
+
+}
+/* ---------- 5. 分隔线 + 例句区 ---------- */
+.divider {
+ height: 1px; background-color: var(--line, #e6e6e6); background: var(--ew-divider); margin: 6px 0; 
+}
+.examples {
+ display: flex; flex-direction: column; gap: 6px; 
+}
+.example-item {
+
+  display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-radius: 8px;
+  background: var(--ew-ex-bg);
+  box-shadow: inset 3px 0 0 var(--ew-ex-bar);
+
+}
+.ex-en {
+
+  color: var(--ink, #1d1d1d); line-height: 1.4;
+  font-size: calc(12px * var(--scale-example, 1) * var(--card-font-scale, 1));
+
+}
+.ex-cn {
+
+  color: var(--ew-warm-ink); line-height: 1.4;
+  font-size: calc(12px * var(--scale-example, 1) * var(--card-font-scale, 1));
+
+}
+.action-btn.example-toggle-btn {
+
+  color: var(--ew-fav); background: var(--ew-fav-bg); border-color: var(--ew-fav-line);
+  box-shadow: var(--ew-btn-sh), inset 0 1px 0 rgba(255,255,255,.9);
+
+}
+.action-btn.example-toggle-btn:hover {
+ background: var(--ew-fav); color: #fff; border-color: var(--ew-fav);
+                                       transform: translateY(-2px); box-shadow: 0 7px 15px -4px var(--ew-fav-sh); 
+}
+.action-btn.example-toggle-btn.active {
+ background: linear-gradient(135deg, var(--ew-fav), #b45309); color: #fff;
+                                        border-color: var(--ew-fav); box-shadow: 0 5px 13px -3px var(--ew-fav-sh); 
+}
+/* ---------- 6. 显示/隐藏（原样保留，逻辑在 cardJs） ---------- */
+.eye-btn {
+ display: flex; 
+}
+.def-cn {
+ display: block; 
+}
+.ex-cn {
+ display: block; 
+}
+.def-en.hide {
+ display: none; 
+}
+.def-cn.hide {
+ display: none; 
+}
+.ex-cn.hide {
+ display: none; 
+}
+/* ---------- 7. 窄屏：4 个按钮 + 长单词塞不进一行 ----------
+   应用的移动端断点就是 640px，此时卡片内宽约 302px，4 个 44px 按钮就要 206px，
+   `institutionalization` 这样的长词会被压出去。让按钮整组独占一行。
+   ⚠️ 这是全文件唯一一处动了布局的地方；不想要，删掉这一段即可。 */
+@media (max-width: 640px) {
+
+  .card-header { flex-wrap: wrap; row-gap: 10px; }
+  .actions { flex: 1 0 100%; justify-content: space-between; }
+
+}
+/* ---------- 8. 暗色皮肤（Dark / Starry / Sci-Fi）：只重映射变量 ---------- */
+body.dark-mode .word-card {
+
+  --ew-h1-deep:#6ee7b7; --ew-h1-soft:rgba(5,150,105,.20);
+  --ew-h1-sh:rgba(5,150,105,.45);
+  --ew-ink:#a7f3d0;
+  --ew-warm-ink:#fdba74;
+  --ew-def-bg:rgba(255,255,255,.045); --ew-def-bar:#34d399;
+  --ew-ex-bg:rgba(217,119,6,.10);     --ew-ex-bar:#fbbf24;
+  --ew-divider:linear-gradient(90deg,rgba(110,231,183,.38) 0%,rgba(103,232,249,.16) 55%,rgba(255,255,255,0) 100%);
+  --ew-c1:var(--card-bg); --ew-c2:var(--card-bg);
+  --ew-card-line:var(--line);
+  --ew-card-sh:0 1px 2px rgba(0,0,0,.35),0 12px 26px -16px rgba(0,0,0,.75);
+  --ew-card-sh-up:0 2px 4px rgba(0,0,0,.40),0 20px 34px -18px rgba(0,0,0,.80);
+  --ew-btn-line:var(--line); --ew-btn-sh:0 1px 2px rgba(0,0,0,.30);
+  --ew-play-bg:rgba(5,150,105,.16);  --ew-play-line:rgba(110,231,183,.34);
+  --ew-eye-bg:rgba(8,145,178,.16);   --ew-eye-line:rgba(103,232,249,.30);
+  --ew-mark-bg:rgba(225,29,72,.16);  --ew-mark-line:rgba(253,164,175,.30);
+  --ew-fav-bg:rgba(217,119,6,.16);   --ew-fav-line:rgba(252,211,77,.30);
+
+}
+  </style>
+  <style id="style-simple">
+.word-card {
+    background: var(--card-bg, #ffffff);
+    border-radius: 16px;
+    padding: 14px 18px;
+    box-shadow: 0 1px 2px rgba(15,118,110,0.06), 0 6px 16px rgba(15,118,110,0.07);
+    border: 1px solid var(--line, #e6e6e6);
+    border-left: 4px solid var(--primary, #0f766e); min-height: 260px; display: flex; flex-direction: column;
+    transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+    margin-bottom: 16px;
+}
+.word-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 26px rgba(15, 118, 110, 0.10);
+    border-color: var(--primary-soft, #ccfbf1);
+}
+.word-card.highlighted { border-left-color: var(--unknown, #f43f5e); background: #fef6f3; }
+.word-card:active { transform: scale(0.99); }
+.word-card.enter { animation: cardIn 0.5s both; }
+@keyframes cardIn {
+    from { opacity: 0; transform: translateY(14px) scale(0.99); }
+    to   { opacity: 1; transform: none; }
+}
+
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
+.word-basic { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.word-index { color: var(--ink-3, #64748b); font-weight: var(--card-font-weight, 600); font-size: calc(12px * var(--scale-basic, 1) * var(--card-font-scale, 1)); }
+.word-title { font-weight: var(--card-font-weight, 700); color: #15803d; letter-spacing: -0.3px; font-size: calc(22px * var(--scale-basic, 1) * var(--card-font-scale, 1)); }
+.word-phonetic { color: var(--ink-2, #475569); font-size: calc(13px * var(--scale-basic, 1) * var(--card-font-scale, 1)); }
+
+.actions { display: flex; gap: 10px; }
+/* 简化版原来把按钮写死 44px、图标写死 18px —— 字号调到 160% 时文字变大而按钮纹丝不动，
+   和平级词卡（翡翠版）行为不一致；图标还被 width/height:28px 的盒子顶到盒顶，实测偏上 4.75px。
+   这里对齐翡翠版的做法：按钮/图标跟 --card-font-scale 走，并且不再给 <i> 固定宽高。
+   缩放曲线与翡翠版**逐字相同**（同比例、下限 1、上限 1.8）——
+   两个皮肤的图标大小从此完全同步，切换皮肤不会看到按钮忽大忽小。 */
+.action-btn {
+    --ew-scale: clamp(1, var(--card-font-scale, 1), 1.8);
+    --ew-btn: calc(44px * var(--ew-scale));
+    cursor: pointer; transition: all 0.2s;
+    width: var(--ew-btn); height: var(--ew-btn);
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 90px; background: var(--action-btn-bg, #f1f5f9);
+    color: var(--ink-3, #64748b); border: none;
+}
+.action-btn svg { width: 28px; height: 28px; transition: transform 0.18s; }
+.action-btn i { display: block; line-height: 1; transition: transform 0.18s; }
+.action-btn:hover { background: var(--primary, #0f766e); color: #fff; box-shadow: 0 4px 12px var(--primary-ring, rgba(15,118,110,0.3)); transform: translateY(-2px); }
+.action-btn:hover svg { transform: scale(1.12); }
+.action-btn:active { transform: scale(0.88); }
+.action-btn.act-play:hover { background: var(--primary, #0f766e); color: #fff; box-shadow: 0 4px 12px var(--primary-ring, rgba(15,118,110,0.3)); }
+.action-btn.act-eye:hover { background: var(--amber-soft, #fef3c7); color: var(--amber, #d97706); box-shadow: 0 4px 12px var(--amber-ring, rgba(217,119,6,0.3)); }
+.action-btn.act-mark:hover { background: var(--unknown-soft, #ffe4e6); color: var(--unknown, #f43f5e); box-shadow: 0 4px 12px var(--unknown-ring, rgba(244,63,94,0.3)); }
+.action-btn.act-mark.is-active { background: var(--unknown, #f43f5e); color: #fff; box-shadow: 0 4px 14px var(--unknown-ring, rgba(244,63,94,0.3)); }
+.action-btn.act-fav:hover { background: var(--amber-soft, #fef3c7); color: var(--amber, #d97706); box-shadow: 0 4px 12px var(--amber-ring, rgba(217,119,6,0.3)); }
+.action-btn.act-fav.is-active { background: var(--amber, #d97706); color: #fff; box-shadow: 0 4px 12px var(--amber-ring, rgba(217,119,6,0.3)); }
+
+.definition { margin-bottom: 6px; padding: 6px 8px; border-radius: 6px; background-color: var(--def-bg, #e6f0e8); }
+.def-en { color: var(--ink, #1d1d1d); line-height: 1.4; margin-bottom: 3px; font-size: calc(13px * var(--scale-def, 1) * var(--card-font-scale, 1)); }
+.def-cn { color: var(--ink, #1d1d1d); line-height: 1.4; font-size: calc(13px * var(--scale-def, 1) * var(--card-font-scale, 1)); }
+
+.divider { height: 1px; background-color: var(--line, #e6e6e6); margin: 6px 0; }
+
+.examples { display: flex; flex-direction: column; gap: 6px; }
+.example-item { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-radius: 6px; background-color: var(--ex-bg, #fdf8e8); }
+.ex-en { color: var(--ink, #1d1d1d); line-height: 1.4; font-size: calc(12px * var(--scale-example, 1) * var(--card-font-scale, 1)); }
+.ex-cn { color: var(--ink, #1d1d1d); line-height: 1.4; font-size: calc(12px * var(--scale-example, 1) * var(--card-font-scale, 1)); }
+
+.action-btn.example-toggle-btn { width: var(--ew-btn); height: var(--ew-btn); border-radius: 90px; background: var(--amber-soft, #fef3c7); color: var(--amber, #d97706); }
+.action-btn.example-toggle-btn:hover { background: #fde9c2; transform: translateY(-2px); box-shadow: 0 4px 12px var(--amber-ring, rgba(217,119,6,0.3)); color: var(--amber, #d97706); }
+.action-btn.example-toggle-btn.active { background: linear-gradient(135deg, var(--amber, #d97706), #b45309); color: #fff; }
+
+/* All fields visible by default; eye button toggles Chinese translation */
+.eye-btn { display: flex; }
+.def-cn { display: block; }
+.ex-cn { display: block; }
+.def-cn.hide { display: none; }
+.ex-cn.hide { display: none; }
+.act-eye.is-active { background: var(--amber-soft, #fef3c7); color: var(--amber, #d97706); }
+.action-btn i { font-size: calc(18px * var(--ew-scale)); }
+.action-btn:hover i { transform: scale(1.1); }
+
+  </style>
+</head>
+<body>
+  <div class="layout-row">
+    <aside class="sidebar">
+      <div class="sidebar-content">
+        <button id="sidebar-home-btn" class="sidebar-brand-btn active" data-tooltip="Catalogue">
+          <i class="fa-solid fa-dragon"></i>
+          <span>DragonCard</span>
+        </button>
+        <div class="study-tabs" id="study-tabs-container"></div>
+      </div>
+    </aside>
+    <div class="main-content">
+      <div class="study-top-bar">
+        <!-- 工具独有：切词卡样式（翡翠 / Simple）。放在最左侧，本体此处是「返回主页」。 -->
+        <div class="skin-toggle-wrap" id="skin-toggle-wrap">
+          <button id="style-btn" class="top-btn" data-tooltip="Skin"><i class="fa-solid fa-palette"></i></button>
+          <div class="skin-dropdown" id="style-dropdown" style="display:none;">
+            <div class="skin-dropdown-header"><i class="fa-solid fa-palette"></i> <span>Skin</span></div>
+            <div class="skin-list" id="style-list"></div>
+          </div>
+        </div>
+        <span id="study-deck-title" class="study-deck-title"></span>
+        <span style="flex:1"></span>
+        <button id="font-settings-btn" class="top-btn" data-tooltip="Font size">
+          <i class="fa-solid fa-font"></i>
+        </button>
+        <div class="control-group">
+          <button class="top-btn voice-select-btn" data-tooltip="Voice">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+          <div class="voice-dropdown" style="display:none;">
+            <div class="voice-dropdown-header">Select Voice</div>
+            <div class="voice-list"></div>
+          </div>
+        </div>
+        <button class="top-btn" id="scroll-top-btn" data-tooltip="Scroll to Top">
+          <i class="fa-solid fa-arrow-up"></i>
+        </button>
+        <button class="top-btn" id="scroll-bottom-btn" data-tooltip="Scroll to Bottom">
+          <i class="fa-solid fa-arrow-down"></i>
+        </button>
+        <button id="card-view-btn" class="top-btn" data-tooltip="Single Card">
+          <i class="fa-solid fa-grip"></i>
+        </button>
+        <button id="refresh-stats" class="stats-text" data-tooltip="Refresh">
+          <i class="fa-solid fa-arrows-rotate"></i>
+          <span>0 / 0</span>
+        </button>
+      </div>
+      <div class="study-scroll" id="study-scroll">
+        <div class="study-content">
+          <div id="catalogue-view"><div id="catalogue-grid"></div></div>
+          <div id="study-pages-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="font-drawer" class="font-drawer" style="display:none;">
+    <div class="setting-item">
+      <label>Font size</label>
+      <div class="control">
+        <button id="font-size-minus">&minus;</button>
+        <span id="font-size-value" class="value">100%</span>
+        <button id="font-size-plus">+</button>
+      </div>
+    </div>
+    <button id="reset-fonts" class="reset-btn">Reset</button>
+  </div>
+
+  <!-- 结课弹窗：点侧栏页签的 × 会弹它（本体 templates/index.html:236 同款）。
+       结构/尺寸/配色都由 assets/app.css 第 13 节按实测值展开，这里只留语义类名。 -->
+  <div id="finish-modal" class="modal-overlay" style="display:none;">
+    <div class="modal" style="width:380px;">
+      <div class="finish-hero">
+        <div class="finish-badge"><i class="fa-solid fa-check"></i></div>
+        <div class="finish-title">Finish Study?</div>
+        <div id="finish-subtitle">Review your progress</div>
+      </div>
+      <div class="finish-stats">
+        <div class="finish-stat">
+          <div id="finish-total" class="finish-stat-num">0</div>
+          <div class="finish-stat-label">Total</div>
+        </div>
+        <div class="finish-stat">
+          <div id="finish-marked" class="finish-stat-num unknown">0</div>
+          <div class="finish-stat-label">Unknown</div>
+        </div>
+      </div>
+      <div class="finish-actions">
+        <button id="modal-finish-cancel">Keep studying</button>
+        <button id="modal-finish-confirm">Finish</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="global-tooltip" class="action-btn-tooltip"></div>
+  <div id="toast" class="toast"></div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

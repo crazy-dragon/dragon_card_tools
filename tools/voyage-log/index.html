@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>星际航行日志</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+  <!-- 1) 外壳：与 coca-cards 同一份（布局/侧栏/顶栏/页签/目录/弹窗/toast/tooltip） -->
+  <link rel="stylesheet" href="assets/app.css">
+  <!-- 2) 本工具的内容：月历 + 卡面（只有结构，颜色走变量） -->
+  <link rel="stylesheet" href="assets/calendar.css">
+  <!-- 3+4) 两套皮肤：只换色。挂 body[data-skin]，由 app.js 切 -->
+  <link rel="stylesheet" href="assets/skin-night.css">
+  <link rel="stylesheet" href="assets/skin-plain.css">
+</head>
+<body data-skin="plain">
+  <!-- 外壳已按用户要求精简（2026-09-22）：不要侧边栏、不要一堆按钮。
+       目录 / 月份页签都收到顶栏一行里，主区直接占满宽度。 -->
+  <div class="layout-row">
+    <div class="main-content">
+      <div class="study-top-bar">
+        <button id="home-btn" class="brand-btn active" data-tooltip="回到目录">
+          <i class="fa-solid fa-rocket"></i>
+          <span id="study-deck-title" class="study-deck-title"></span>
+        </button>
+        <div class="study-tabs" id="study-tabs-container"></div>
+        <span id="stats-text" class="stats-chip">—</span>
+        <button id="card-view-btn" class="top-btn" data-tooltip="今天的卡">
+          <i class="fa-solid fa-star"></i>
+        </button>
+        <button id="font-settings-btn" class="top-btn" data-tooltip="字号">
+          <i class="fa-solid fa-font"></i>
+        </button>
+        <div class="skin-toggle-wrap" id="skin-toggle-wrap">
+          <button id="style-btn" class="top-btn" data-tooltip="皮肤"><i class="fa-solid fa-palette"></i></button>
+          <div class="skin-dropdown" id="style-dropdown" style="display:none;">
+            <div class="skin-dropdown-header"><i class="fa-solid fa-palette"></i> <span>皮肤</span></div>
+            <div class="skin-list" id="style-list"></div>
+          </div>
+        </div>
+      </div>
+      <div class="study-scroll" id="study-scroll">
+        <div class="study-content">
+          <div id="catalogue-view"><div id="catalogue-grid"></div></div>
+          <div id="study-pages-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="font-drawer" class="font-drawer" style="display:none;">
+    <div class="setting-item">
+      <label>字号</label>
+      <div class="control">
+        <button id="font-size-minus">&minus;</button>
+        <span id="font-size-value" class="value">100%</span>
+        <button id="font-size-plus">+</button>
+      </div>
+    </div>
+    <button id="reset-fonts" class="reset-btn">重置</button>
+  </div>
+
+  <!-- 结束这一页：点侧栏页签的 × 会弹它（结构/尺寸/配色照 coca-cards，
+       只是把「总计 / 未掌握」换成这个卡组有意义的两个数：记录天数 / 点亮次数）。 -->
+  <div id="finish-modal" class="modal-overlay" style="display:none;">
+    <div class="modal" style="width:380px;">
+      <div class="finish-hero">
+        <div class="finish-badge"><i class="fa-solid fa-check"></i></div>
+        <div class="finish-title">结束这一页？</div>
+        <div id="finish-subtitle">回顾这段航行</div>
+      </div>
+      <div class="finish-stats">
+        <div class="finish-stat">
+          <div id="finish-total" class="finish-stat-num">0</div>
+          <div class="finish-stat-label">记录天数</div>
+        </div>
+        <div class="finish-stat">
+          <div id="finish-marked" class="finish-stat-num unknown">0</div>
+          <div class="finish-stat-label">点亮次数</div>
+        </div>
+      </div>
+      <div class="finish-actions">
+        <button id="modal-finish-cancel">再看看</button>
+        <button id="modal-finish-confirm">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 某一天的卡面（点月历上的格子弹出来） -->
+  <div id="day-modal" class="modal-overlay" style="display:none;">
+    <div class="day-modal-box"><div id="day-card-host"></div></div>
+  </div>
+
+  <!-- 点亮确认（点卡面里的任务行弹出）：只有 是 / 否，照用户要求做小
+       ——见 calendar.css 第 7 节。z-index 压过 #day-modal，两者会同时开着。 -->
+  <div id="task-modal" class="modal-overlay" style="display:none;">
+    <div class="modal task-modal">
+      <div class="task-modal-icon"><i class="fa-solid fa-star"></i></div>
+      <div id="task-modal-title" class="task-modal-title">点亮这一项？</div>
+      <div id="task-modal-sub" class="task-modal-sub"></div>
+      <div class="task-modal-actions">
+        <button id="task-modal-no">否</button>
+        <button id="task-modal-yes">是</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="vg-tip" id="vg-tip"></div>
+  <div id="global-tooltip" class="action-btn-tooltip"></div>
+  <div id="toast" class="toast"></div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

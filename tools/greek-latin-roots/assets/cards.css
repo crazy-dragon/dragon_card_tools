@@ -1,0 +1,264 @@
+/* ==========================================================================
+   卡面：Greek & Latin Roots（.glr-*）—— 152 个词根，单视图（一列双面卡）
+   --------------------------------------------------------------------------
+   卡面**照搬原模板**（t_template 28「Greek & Latin Roots」，lang=en）：
+     .glr-root / .glr-bar / .glr-origin / .glr-dot / .glr-idx / .glr-actions /
+     .glr-act / .glr-flip / .glr-inner / .glr-face / .glr-front / .glr-back /
+     .glr-root-word / .glr-prompt / .glr-hint / .glr-back-head / .glr-meaning /
+     .glr-sec / .glr-derivs / .glr-deriv / .glr-d-word / .glr-tier / .glr-d-mean /
+     .glr-etym
+   只在三处动过（其余数值逐像素沿用）：
+     1. 字号/内边距 → calc(Npx * var(--kt))，让工具的字号滑杆管得住卡面；
+        盒子（.glr-flip 的 270px）同倍率放大 —— 原模板 270px 是在 k=1.0 下量的，
+        本工具 k=1.20，故 calc(270px * var(--kt)) 才是"同一个比例"。
+     2. 原模板用 style="--glr-accent:…" 内联给色 → 改成类名（.glr-greek /
+        .glr-latin），因为内联值皮肤覆盖不了，而"分类彩"皮肤要按 Greek/Latin 淡染。
+     3. 主题色/文字色抽成 --glr-* 变量，在 .glr-root 上按皮肤给三套
+        （见第 2 段）。**这些皮肤覆盖必须写在 .glr-root 上** —— var() 在声明它的
+        元素上就替换完了，写在 html 上读不到卡自己的 --glr-accent。
+       原模板的 body.dark-mode 段 = 本工具的 .skin-glass（墨玻璃）。
+
+   ★ .glr-bar（origin + #no + 4 个动作按钮）是**不随字号缩放的机身**：
+     按钮要恒定 52px 触控目标，且这样每张卡的翻面区顶边都在同一个 y 上。
+     ⚠️ 因此 bar 里的字号都是死 px，只有 .glr-flip 以内的内容吃 --kt。
+   ★ 动作按钮是**纯图标**，标签靠 hover 时的 CSS ::after 提示（.glr-act::after
+     读 data-tip）—— 与本体"按钮必须 icon+文字"的规矩相反，这是本卡面从原模板
+     继承的身份，别改。
+   ★ etymology 字段**自带 HTML**（<em> 与 &mdash;），JS 里按 HTML 拼，不转义。
+   ★ 数据里还有 mnemonic 字段（152 张全有），原模板没用 → 这里也不用。
+   ========================================================================== */
+
+/* ==========================================================================
+   1. Origin 强调色（Greek 青灰 / Latin 蓝灰）—— 类名而非内联
+   ========================================================================== */
+.glr-greek { --glr-accent: #6f8f8b; }
+.glr-latin { --glr-accent: #5a7d94; }
+html.skin-glass .glr-greek { --glr-accent: #8fb3ae; }
+html.skin-glass .glr-latin { --glr-accent: #7fa3be; }
+
+/* ==========================================================================
+   2. 三套皮肤的 glr 调色板
+   ⚠️ 全部声明在 .glr-root 上：.skin-category 那套要用 var(--glr-accent)，
+     而 --glr-accent 是声明在 .glr-root 上的，只有在同一个元素上读才拿得到。
+   ========================================================================== */
+.glr-root {
+    /* 皮肤一（默认）：原模板的本色 —— 冷调灰绿的"低疲劳阅读"底 */
+    --glr-bg: #f5f9f6;
+    --glr-line: #dde7e0;
+    --glr-bar-bg: #eff4f0;
+    --glr-bar-line: #e5ede7;
+    --glr-strong: #2e444e;      /* 大词根 / 释义 */
+    --glr-text: #33494a;        /* 衍生词 */
+    --glr-soft: #56696e;        /* 衍生词释义 / 词源正文 */
+    --glr-idx: #9fada5;         /* #序号 */
+    --glr-dim: #a4b3ac;         /* prompt / hint */
+    --glr-sec: #8fa39d;         /* 小节标签 */
+    --glr-wash: #ecf3ee;        /* 词源条底色 */
+    --glr-em: #3a4f4c;          /* 词源里的 <em> */
+    --glr-acts-bg: #e6eeea;
+    --glr-acts-fg: #5a6b7d;
+    --glr-tip-bg: #34474e;
+    --glr-tip-fg: #f2f7f4;
+    --glr-mark: #b8757f;        /* 标记激活 */
+    --glr-fav: #bf9a63;         /* 收藏激活 */
+    --glr-shadow: 0 1px 3px rgba(31, 48, 66, .06);
+}
+html.skin-glass .glr-root {
+    /* 皮肤二：墨玻璃 —— 原模板 body.dark-mode 那套 */
+    --glr-bg: #1f262a;
+    --glr-line: #2e363b;
+    --glr-bar-bg: #232b30;
+    --glr-bar-line: #2e363b;
+    --glr-strong: #dfe7e6;
+    --glr-text: #cfdcdc;
+    --glr-soft: #a3b5b4;
+    --glr-idx: #7d8f8e;
+    --glr-dim: #7d8f8e;
+    --glr-sec: #7d8f8e;
+    --glr-wash: #252e33;
+    --glr-em: #e3ecea;
+    --glr-acts-bg: #2b343a;
+    --glr-acts-fg: #a3b5b4;
+    --glr-tip-bg: #0f1416;
+    --glr-tip-fg: #eaf2ef;
+    --glr-mark: #c98a94;
+    --glr-fav: #d0ac74;
+    --glr-shadow: 0 1px 3px rgba(0, 0, 0, .35);
+}
+html.skin-category .glr-root {
+    /* 皮肤三：分类彩 —— 按 Greek / Latin 强调色淡染 */
+    --glr-bg: color-mix(in srgb, var(--glr-accent) 8%, #fff);
+    --glr-line: color-mix(in srgb, var(--glr-accent) 24%, #fff);
+    --glr-bar-bg: color-mix(in srgb, var(--glr-accent) 14%, #fff);
+    --glr-bar-line: color-mix(in srgb, var(--glr-accent) 22%, #fff);
+    --glr-wash: color-mix(in srgb, var(--glr-accent) 12%, #fff);
+    --glr-acts-bg: color-mix(in srgb, var(--glr-accent) 18%, #fff);
+    --glr-strong: #24333c;
+    --glr-text: #2c3f45;
+    --glr-soft: #4f6469;
+    --glr-idx: #8b9aa0;
+    --glr-dim: #94a5a7;
+    --glr-sec: #7d9298;
+    --glr-em: #2b3d40;
+    --glr-acts-fg: #4d6070;
+}
+@supports not (background: color-mix(in srgb, red 10%, white)) {
+    html.skin-category .glr-root { --glr-bg: #f3f6f8; --glr-line: #dfe6ea; --glr-bar-bg: #e9eff2; --glr-bar-line: #dfe6ea; --glr-wash: #ebf1f4; --glr-acts-bg: #e4ebef; }
+}
+
+/* 衍生词三档难度色（TOP500 最常用 → TOP2k → SUPP 补充）。原模板是内联
+   background，这里改类名（三个类必须都在，否则 JS 找不到就白底白字）。 */
+.glr-t-top500 { background: #6f9e86; }
+.glr-t-top2k { background: #5a7d94; }
+.glr-t-supp { background: #9aa9a4; }
+
+/* ==========================================================================
+   3. 卡片外壳
+   ========================================================================== */
+.glr-root {
+    position: relative;
+    box-sizing: border-box;
+    overflow: hidden;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    background: var(--glr-bg);
+    border: 1px solid var(--glr-line);
+    box-shadow: var(--glr-shadow);
+    color: var(--glr-strong);
+}
+html.skin-glass .glr-root { backdrop-filter: blur(12px) saturate(130%); }
+
+/* --- 顶栏：左 origin + #no，右 4 个动作按钮。机身尺寸恒定，不吃 --kt --- */
+.glr-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 16px;
+    background: var(--glr-bar-bg);
+    border-bottom: 1px solid var(--glr-bar-line);
+}
+.glr-bar-left { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.glr-origin {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--glr-accent);
+    white-space: nowrap;
+}
+.glr-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--glr-accent); display: inline-block; }
+.glr-idx { font-size: 11.5px; font-weight: 600; color: var(--glr-idx); }
+.glr-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+.glr-act {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    border-radius: 9999px;
+    border: none;
+    cursor: pointer;
+    background: var(--glr-acts-bg);
+    color: var(--glr-acts-fg);
+    font-size: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .18s ease, color .18s ease, transform .12s ease;
+    touch-action: manipulation;
+}
+.glr-act:hover { background: var(--glr-accent); color: #fff; }
+.glr-act:active { transform: scale(.92); }
+.glr-act.is-active { background: var(--glr-accent); color: #fff; }
+.glr-act.act-mark.is-active { background: var(--glr-mark); color: #fff; }
+.glr-act.act-fav.is-active { background: var(--glr-fav); color: #fff; }
+/* 纯图标按钮：标签只在 hover 时出现（读 data-tip） */
+.glr-act::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(3px);
+    background: var(--glr-tip-bg);
+    color: var(--glr-tip-fg);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .2px;
+    padding: 4px 9px;
+    border-radius: 7px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 20;
+    transition: opacity .18s ease, transform .18s ease, visibility .18s;
+}
+.glr-act:hover::after { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(7px); }
+
+/* ==========================================================================
+   4. 翻面（正面 = 大词根，背面 = 释义 + 衍生词 + 词源）
+   高度 270px 沿用原模板，但乘 --kt：原模板是在 k=1.0 下量的，本工具 k=1.20，
+   乘上才是同一个比例；实测最坏一条（4 条衍生词）约占 292px，装得下。
+   ========================================================================== */
+.glr-flip { perspective: 1400px; height: calc(270px * var(--kt)); }
+.glr-inner { position: relative; width: 100%; height: 100%; transition: transform .5s; transform-style: preserve-3d; }
+.glr-inner.flipped { transform: rotateY(180deg); }
+.glr-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    padding: calc(16px * var(--kt)) calc(20px * var(--kt));
+    display: flex;
+    flex-direction: column;
+}
+.glr-front { align-items: center; justify-content: center; text-align: center; cursor: pointer; }
+.glr-back { transform: rotateY(180deg); overflow: auto; cursor: pointer; }
+
+.glr-root-word {
+    font-size: calc(50px * var(--kt));
+    font-weight: 800;
+    color: var(--glr-strong);
+    line-height: 1.1;
+    letter-spacing: -.5px;
+    overflow-wrap: break-word;
+    max-width: 100%;
+}
+.glr-prompt { margin-top: calc(16px * var(--kt)); font-size: calc(13px * var(--kt)); color: var(--glr-dim); letter-spacing: .3px; }
+.glr-hint { position: absolute; bottom: calc(13px * var(--kt)); right: calc(18px * var(--kt)); font-size: calc(11.5px * var(--kt)); color: var(--glr-dim); }
+
+.glr-back-head { font-size: calc(14px * var(--kt)); font-weight: 700; color: var(--glr-accent); letter-spacing: .3px; margin-bottom: calc(5px * var(--kt)); }
+.glr-meaning { font-size: calc(19px * var(--kt)); font-weight: 600; color: var(--glr-strong); line-height: 1.35; margin-bottom: calc(11px * var(--kt)); }
+.glr-sec { font-size: calc(10.5px * var(--kt)); font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--glr-sec); margin-bottom: calc(6px * var(--kt)); }
+
+.glr-derivs { display: flex; flex-direction: column; gap: calc(5px * var(--kt)); }
+.glr-deriv { display: flex; align-items: baseline; gap: calc(10px * var(--kt)); border-top: 1px solid var(--glr-line); padding-top: calc(5px * var(--kt)); }
+.glr-deriv:first-child { border-top: none; padding-top: 0; }
+.glr-d-word { flex: 0 0 auto; font-weight: 700; font-size: calc(15px * var(--kt)); color: var(--glr-text); }
+.glr-tier { flex: 0 0 auto; font-size: calc(10px * var(--kt)); color: #fff; padding: calc(1px * var(--kt)) calc(6px * var(--kt)); border-radius: calc(6px * var(--kt)); white-space: nowrap; }
+.glr-d-mean { flex: 1; font-size: calc(14px * var(--kt)); color: var(--glr-soft); }
+
+/* 词源条：字段自带 HTML（<em> / &mdash;），JS 不转义 */
+.glr-etym {
+    margin-top: auto;
+    font-size: calc(13px * var(--kt));
+    color: var(--glr-soft);
+    background: var(--glr-wash);
+    border-left: 3px solid var(--glr-accent);
+    border-radius: 0 8px 8px 0;
+    padding: calc(7px * var(--kt)) calc(10px * var(--kt));
+    line-height: 1.45;
+}
+.glr-etym em { font-style: italic; color: var(--glr-em); font-weight: 600; }
+
+/* ==========================================================================
+   5. 窄屏：52px×4 + 8px×3 = 232px，仍放得下，只把机身收一点别让 bar 换行出丑
+   ========================================================================== */
+@media (max-width: 480px) {
+    .glr-bar { padding: 9px 12px; gap: 8px; }
+    .glr-act { width: 44px; height: 44px; font-size: 17px; }
+    .glr-actions { gap: 6px; }
+}

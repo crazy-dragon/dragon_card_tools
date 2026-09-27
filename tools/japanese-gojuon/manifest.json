@@ -1,0 +1,19 @@
+{
+  "name": "日语五十音图 · Gojūon",
+  "description": "46 个假名（46 清音 + 拨音ん）：顶栏切换「五十音图 / 卡片」两种视图。五十音图按 5 段 × 11 行排成真正的表，点格子读假名；卡片视图显示平假名/片假名/罗马字/例词。标记/收藏、日语朗读、三套皮肤。",
+  "lang": "ja",
+  "fields": [
+    "hiragana",
+    "katakana",
+    "romaji",
+    "row",
+    "example"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "word_play",
+    "word_mark",
+    "favorite_toggle"
+  ],
+  "cardsJson": "../dragoncard/default_cards/japanese_gojuon/cards.json"
+}

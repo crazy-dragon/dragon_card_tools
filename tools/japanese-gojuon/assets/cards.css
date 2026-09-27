@@ -1,0 +1,311 @@
+/* ==========================================================================
+   卡面：日语五十音（.jgo-*）—— 两种视图共用一份数据
+   --------------------------------------------------------------------------
+   chart 五十音图   5 段（あいうえお）× 11 行的真表格，点格子读假名
+   card  卡片       平假名 / 片假名 / 罗马字 / 例词，与其他语言类工具同版面
+
+   类名从原模板搬来（.jgo-row / .jgo-kana / .jgo-hira / .jgo-kata / .jgo-romaji /
+   .jgo-example），另加 .jgo-chart 那套表格样式。改动点：
+     · 卡片字号 ×var(--kt)（--k=1.30 见 app.css）；**表格字号只吃工具字号滑杆
+       （--card-font-scale），不吃 --k** —— --k 是"假名当主角"的放大倍数，
+       套到表格上会把 5 列撑爆
+     · 动作按钮钉右上角右轨 .dc-acts（几何与别的工具逐字相同）
+     · 顶部除了「行」再加一个「段」胶囊（段 = 元音列，就是配色依据）
+
+   配色 = 5 个元音段各一色（--cat），ん 中性灰。这样五十音图上就是 5 条竖向色带，
+   一眼看出"同一段 = 同一个元音"，而这正是五十音排列的真正依据。
+   ⚠️ 段是从 romaji 的**尾字母**推出来的（あ→a / し→shi→i / を→wo→o），不用数据里
+   另加字段；ん 没有元音，归 .dan-n。
+   ========================================================================== */
+
+/* ===== 1. 段色（每套皮肤一套） ===== */
+.dan-a { --cat: #2f6ac0; }
+.dan-i { --cat: #7c44b4; }
+.dan-u { --cat: #0e8f84; }
+.dan-e { --cat: #c2572d; }
+.dan-o { --cat: #a1841c; }
+.dan-n { --cat: #8a8f98; }
+html.skin-glass .dan-a { --cat: #7fa9e8; }
+html.skin-glass .dan-i { --cat: #c19bf0; }
+html.skin-glass .dan-u { --cat: #5fc9bd; }
+html.skin-glass .dan-e { --cat: #e08a5f; }
+html.skin-glass .dan-o { --cat: #cbb553; }
+html.skin-glass .dan-n { --cat: #9c94b0; }
+
+/* 假名用日文字体栈（与工具主体的 Inter 不同，这两个字段专门指过去） */
+.jgo-hira, .jgo-kata, .c-hira, .c-kata, .jgo-example, .c-ex, .jgo-row, .c-rowlabel {
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP",
+                 "Yu Gothic", "PingFang SC", sans-serif;
+}
+
+/* ==========================================================================
+   2. 卡片视图
+   ========================================================================== */
+.jgo-root {
+    position: relative;
+    box-sizing: border-box;
+    border-radius: 18px;
+    /* 右 158px = 右轨留白，固定不缩放 */
+    padding: calc(15px * var(--kt)) 158px calc(14px * var(--kt)) calc(20px * var(--kt));
+    margin-bottom: 16px;
+    color: var(--card-ink);
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: 4px solid var(--cat);
+    box-shadow: 0 6px 18px rgba(93, 78, 46, .07);
+    min-height: calc(260px * var(--kt));
+    display: flex;
+    flex-direction: column;
+}
+html.skin-glass .jgo-root { backdrop-filter: blur(14px) saturate(140%); }
+
+/* 动作轨道（与别的工具逐字相同：右上角，所有卡同一个 x） */
+.dc-acts {
+    position: absolute;
+    right: 14px;
+    top: 11px;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 13px;
+    background: var(--acts-bg);
+    border: 1px solid var(--acts-line);
+    z-index: 2;
+}
+.dc-acts button {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.dc-acts button:hover { background: var(--act-hover); color: var(--accent); }
+.dc-acts button:active { transform: scale(.94); }
+.dc-acts button.act-mark.is-active { color: var(--gold); }
+.dc-acts button.act-fav.is-active { color: var(--rose); }
+
+/* 顶行：行胶囊 + 段胶囊 */
+.dc-top {
+    display: flex;
+    align-items: center;
+    gap: calc(8px * var(--kt));
+    margin-bottom: calc(8px * var(--kt));
+}
+.jgo-row {
+    display: inline-flex;
+    align-items: center;
+    font-size: calc(13px * var(--kt));
+    font-weight: 700;
+    padding: calc(4px * var(--kt)) calc(12px * var(--kt));
+    border-radius: 999px;
+    background: var(--tag-soft);
+    color: var(--tag-soft-fg);
+    border: 1px solid var(--tag-soft-line);
+    white-space: nowrap;
+}
+.jgo-dan {
+    display: inline-flex;
+    align-items: center;
+    font-size: calc(12px * var(--kt));
+    font-weight: 800;
+    letter-spacing: .8px;
+    padding: calc(4px * var(--kt)) calc(11px * var(--kt));
+    border-radius: 999px;
+    background: var(--cat);
+    color: #fff;
+    white-space: nowrap;
+}
+
+/* 假名区：平假名（主角）+ 片假名 */
+.jgo-kana {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(30px * var(--kt));
+    margin: calc(4px * var(--kt)) 0;
+    flex: 1;
+    flex-wrap: wrap;
+}
+.jgo-kana-block { text-align: center; }
+.jgo-hira {
+    font-size: calc(76px * var(--kt));
+    line-height: 1.1;
+    font-weight: 700;
+    color: var(--strong);
+}
+.jgo-kata {
+    font-size: calc(42px * var(--kt));
+    line-height: 1.1;
+    font-weight: 700;
+    color: var(--cat);
+}
+.jgo-kana-label {
+    margin-top: calc(4px * var(--kt));
+    font-size: calc(11px * var(--kt));
+    color: var(--muted);
+    letter-spacing: 2px;
+}
+.jgo-romaji {
+    text-align: center;
+    font-size: calc(22px * var(--kt));
+    font-weight: 700;
+    color: var(--ink2);
+    letter-spacing: 3px;
+    margin: calc(2px * var(--kt)) 0 calc(10px * var(--kt));
+}
+
+/* 例词：点词读词（浏览器 TTS，ja） */
+.jgo-example {
+    border-top: 1px dashed var(--card-line);
+    padding-top: calc(10px * var(--kt));
+    margin-top: auto;
+    font-size: calc(14px * var(--kt));
+    color: var(--body-ink);
+    line-height: 1.5;
+}
+.jgo-ex-word {
+    color: var(--cat);
+    font-weight: 700;
+    cursor: pointer;
+    border-bottom: 1px dashed transparent;
+    transition: border-color .15s;
+}
+.jgo-ex-word:hover { border-bottom-color: var(--cat); }
+.jgo-ex-word:active { opacity: .6; }
+
+/* ==========================================================================
+   3. 五十音图视图
+   ⚠️ 字号只吃 --card-font-scale（工具字号滑杆），不吃 --k。
+   ========================================================================== */
+.jgo-chart {
+    display: grid;
+    grid-template-columns: calc(52px * var(--card-font-scale, 1)) repeat(5, minmax(0, 1fr));
+    gap: calc(7px * var(--card-font-scale, 1));
+    align-items: stretch;
+}
+.c-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: calc(5px * var(--card-font-scale, 1));
+    padding: calc(2px * var(--card-font-scale, 1)) 0 calc(6px * var(--card-font-scale, 1));
+    font-size: calc(15px * var(--card-font-scale, 1));
+    font-weight: 800;
+    color: var(--strong);
+}
+.c-head b {
+    font-size: calc(11px * var(--card-font-scale, 1));
+    font-weight: 800;
+    color: var(--muted);
+    letter-spacing: 1px;
+}
+.c-head.c-rowlabel { color: transparent; }
+
+.c-rowlabel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(2px * var(--card-font-scale, 1));
+    font-size: calc(14px * var(--card-font-scale, 1));
+    font-weight: 800;
+    color: var(--muted);
+}
+.c-rowlabel b { font-size: calc(10px * var(--card-font-scale, 1)); font-weight: 700; }
+
+.c-cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(2px * var(--card-font-scale, 1));
+    padding: calc(8px * var(--card-font-scale, 1)) calc(6px * var(--card-font-scale, 1));
+    border-radius: calc(12px * var(--card-font-scale, 1));
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: 3px solid var(--cat);
+    color: var(--card-ink);
+    cursor: pointer;
+    user-select: none;
+    transition: transform .12s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.c-cell:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(93, 78, 46, .12); }
+.c-cell:active { transform: scale(.97); }
+.c-cell.empty { visibility: hidden; pointer-events: none; }
+
+.c-hira {
+    font-size: calc(40px * var(--card-font-scale, 1));
+    line-height: 1.08;
+    font-weight: 700;
+    color: var(--strong);
+}
+.c-side {
+    display: flex;
+    align-items: baseline;
+    gap: calc(6px * var(--card-font-scale, 1));
+}
+.c-kata {
+    font-size: calc(17px * var(--card-font-scale, 1));
+    font-weight: 700;
+    color: var(--cat);
+}
+.c-romaji {
+    font-size: calc(11px * var(--card-font-scale, 1));
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+}
+.c-ex {
+    margin-top: calc(3px * var(--card-font-scale, 1));
+    max-width: 100%;
+    font-size: calc(10.5px * var(--card-font-scale, 1));
+    line-height: 1.35;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+.c-ex:hover { color: var(--cat); }
+.c-star {
+    position: absolute;
+    top: calc(5px * var(--card-font-scale, 1));
+    right: calc(6px * var(--card-font-scale, 1));
+    font-size: calc(11px * var(--card-font-scale, 1));
+    color: var(--gold);
+    pointer-events: none;
+}
+.c-fav {
+    position: absolute;
+    top: calc(5px * var(--card-font-scale, 1));
+    left: calc(6px * var(--card-font-scale, 1));
+    font-size: calc(11px * var(--card-font-scale, 1));
+    color: var(--rose);
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   4. 分类彩皮肤：卡底与格子跟着段色淡染
+   （必须写在卡片内选择器上 —— var() 在声明它的元素上就替换完了） */
+html.skin-category .jgo-root {
+    background: color-mix(in srgb, var(--cat) 7%, #fff);
+    border-color: color-mix(in srgb, var(--cat) 22%, #fff);
+    border-top-color: var(--cat);
+}
+html.skin-category .c-cell {
+    background: color-mix(in srgb, var(--cat) 6%, #fff);
+    border-color: color-mix(in srgb, var(--cat) 20%, #fff);
+    border-top-color: var(--cat);
+}
+@supports not (background: color-mix(in srgb, red 10%, white)) {
+    html.skin-category .jgo-root { background: #f4f6f9; border-color: #dfe3e9; }
+    html.skin-category .c-cell { background: #f8fafc; border-color: #dfe3e9; }
+}

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中国古代谶语录</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80'>谶</text></svg>">
+  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="assets/app.css">
+  <link rel="stylesheet" href="assets/cards.css">
+  <script>
+    /* 中国古代谶语录 24 条：按朝代分组（凡例 / 秦 / 汉 / 晋 / 隋 / 唐 / 五代 /
+       宋 / 元 / 明 / 清），顺序由数据里 dynasty 的首次出现顺序决定。
+         chart  朝代时间轴   一代一段，段内网格排谶语原文 + 出处，
+                             点格子 = 读谶语 + 跳到那张卡 —— 模板做不到。
+         card   卡片         朝代 / 谶语原文（大字，可点读）/ 出处 /
+                             白话疏解（可点读）。
+       卷首「凡例」那条是取材说明（非迷信），两种视图里都置顶、样式另给。 */
+    window.DC_TOOL = {
+      title: '中国古代谶语录',
+      voiceLang: 'zh-CN',
+      views: [
+        { id: 'chart', label: '朝代时间轴' },
+        { id: 'card',  label: '卡片' }
+      ]
+    };
+  </script>
+</head>
+<body>
+  <div class="layout-row">
+    <div class="main-content">
+      <div class="study-top-bar">
+        <div class="seg" id="view-seg"></div>
+        <span id="study-deck-title" class="study-deck-title"></span>
+        <span style="flex:1"></span>
+        <button id="font-settings-btn" class="top-btn" data-tooltip="字号">
+          <i class="fa-solid fa-font"></i>
+        </button>
+        <div class="control-group">
+          <button class="top-btn voice-select-btn" data-tooltip="中文朗读音色">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+          <div class="voice-dropdown" style="display:none;">
+            <div class="voice-dropdown-header">选择音色 · 中文</div>
+            <div class="voice-list"></div>
+          </div>
+        </div>
+        <button class="top-btn" id="scroll-top-btn" data-tooltip="回到顶部">
+          <i class="fa-solid fa-arrow-up"></i>
+        </button>
+        <button class="top-btn" id="scroll-bottom-btn" data-tooltip="到最底部">
+          <i class="fa-solid fa-arrow-down"></i>
+        </button>
+        <button id="card-view-btn" class="top-btn" data-tooltip="单卡模式">
+          <i class="fa-solid fa-grip"></i>
+        </button>
+        <div class="skin-toggle-wrap" id="skin-toggle-wrap">
+          <button id="style-btn" class="top-btn" data-tooltip="皮肤">
+            <i class="fa-solid fa-palette"></i>
+          </button>
+          <div class="skin-dropdown" id="style-dropdown" style="display:none;">
+            <div class="skin-dropdown-header"><i class="fa-solid fa-palette"></i> <span>皮肤</span></div>
+            <div class="skin-list" id="style-list"></div>
+          </div>
+        </div>
+        <button id="refresh-stats" class="stats-text" data-tooltip="刷新">
+          <i class="fa-solid fa-arrows-rotate"></i>
+          <span>0 / 0</span>
+        </button>
+      </div>
+      <div class="study-scroll" id="study-scroll">
+        <div class="study-content">
+          <div id="study-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="font-drawer" class="font-drawer" style="display:none;">
+    <div class="setting-item">
+      <label>字号</label>
+      <div class="control">
+        <button id="font-size-minus">&minus;</button>
+        <span id="font-size-value" class="value">100%</span>
+        <button id="font-size-plus">+</button>
+      </div>
+    </div>
+    <button id="reset-fonts" class="reset-btn">复位</button>
+  </div>
+
+  <div id="global-tooltip" class="action-btn-tooltip"></div>
+  <div id="toast" class="toast"></div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

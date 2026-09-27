@@ -1,0 +1,258 @@
+/* ==========================================================================
+   卡面：西方典故阅读卡（.wa-*）
+   --------------------------------------------------------------------------
+   这是「西方典故」小工具唯一的卡面文件（卡组模板的 cardCss 已废弃，卡面不再由
+   卡组提供 —— 一个工具就一种版面）。
+
+   类名从原模板逐条搬来（.wa-root / .wa-badge / .wa-name / .wa-tag / .wa-sec /
+   .wa-para / .wa-ec / .wa-source），只改三件事：
+     1. 所有字号 ×var(--kt)（--k=1.10 见 app.css，工具字号滑杆再乘一层）
+     2. 动作按钮从"卡片右上角 inline 一行"改成**钉在右上角的右轨 .dc-acts**
+        （right/top 与按钮尺寸都不随 --kt 走 ⇒ 每张卡按钮同一个 x）
+     3. 分组小标题 .dc-group-head 是新加的（原模板靠正文里的徽章）
+
+   分组色：4 个组各一色，写在 .wa-greek/.wa-history/.wa-bible/.wa-literature 上，
+   **不是内联 style** —— 这样各皮肤可以整组换成自己的色（墨玻璃要更亮的版本）。
+   ========================================================================== */
+
+/* ===== 1. 分组色（每套皮肤一套） ===== */
+.wa-greek      { --cat: #2f6ac0; }
+.wa-history    { --cat: #c2572d; }
+.wa-bible      { --cat: #a1841c; }
+.wa-literature { --cat: #7c44b4; }
+html.skin-glass .wa-greek      { --cat: #7fa9e8; }
+html.skin-glass .wa-history    { --cat: #e08a5f; }
+html.skin-glass .wa-bible      { --cat: #cbb553; }
+html.skin-glass .wa-literature { --cat: #c19bf0; }
+
+/* ===== 2. 卡盒 ===== */
+.wa-root {
+    position: relative;
+    box-sizing: border-box;
+    border-radius: 18px;
+    /* 右 158px = 右轨留白（14px 边距 + 128px 按钮组 + 16px 余量），固定不缩放 */
+    padding: calc(15px * var(--kt)) 158px calc(14px * var(--kt)) calc(20px * var(--kt));
+    margin-bottom: 18px;
+    color: var(--card-ink);
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: 5px solid var(--cat);
+    box-shadow: 0 6px 18px rgba(93, 78, 46, .07);
+    overflow: hidden;
+    transition: box-shadow .2s ease, transform .2s ease;
+}
+.wa-root:hover { box-shadow: 0 10px 26px rgba(93, 78, 46, .13); transform: translateY(-1px); }
+html.skin-glass .wa-root { backdrop-filter: blur(14px) saturate(140%); }
+
+/* ===== 3. 动作轨道（右上角，所有卡同一个 x） ===== */
+.dc-acts {
+    position: absolute;
+    right: 14px;
+    top: 11px;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 13px;
+    background: var(--acts-bg);
+    border: 1px solid var(--acts-line);
+    z-index: 2;
+}
+.dc-acts button {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.dc-acts button:hover { background: var(--act-hover); color: var(--accent); }
+.dc-acts button:active { transform: scale(.94); }
+.dc-acts button.act-mark.is-active { color: var(--gold); }
+.dc-acts button.act-fav.is-active { color: var(--rose); }
+
+/* ===== 4. 分组小标题（每换一个 group 插一条，滚动时吸顶） ===== */
+.dc-group-head {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: calc(8px * var(--kt));
+    margin: 0 0 calc(10px * var(--kt));
+    padding: calc(7px * var(--kt)) calc(12px * var(--kt));
+    border-radius: 10px;
+    background: var(--panel-solid);
+    border: 1px solid var(--seg-line);
+    font-size: calc(13px * var(--kt));
+    font-weight: 800;
+    color: var(--strong);
+    letter-spacing: .3px;
+}
+.dc-group-head i.dot {
+    width: calc(9px * var(--kt));
+    height: calc(9px * var(--kt));
+    border-radius: 50%;
+    background: var(--cat);
+    flex-shrink: 0;
+}
+.dc-group-head .n {
+    margin-left: auto;
+    font-size: calc(12px * var(--kt));
+    font-weight: 700;
+    color: var(--muted);
+}
+
+/* ===== 5. 徽章 + 标题 ===== */
+.wa-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(6px * var(--kt));
+    font-size: calc(11.5px * var(--kt));
+    font-weight: 800;
+    letter-spacing: .8px;
+    padding: calc(4px * var(--kt)) calc(12px * var(--kt));
+    border-radius: 9999px;
+    color: #fff;
+    background: var(--cat);
+    box-shadow: 0 2px 7px rgba(0, 0, 0, .14);
+    white-space: nowrap;
+}
+.wa-badge i { font-size: calc(9.5px * var(--kt)); opacity: .9; }
+
+.wa-title { margin-top: calc(12px * var(--kt)); }
+.wa-name {
+    font-size: calc(31px * var(--kt));
+    font-weight: 900;
+    color: var(--strong);
+    line-height: 1.25;
+    letter-spacing: -.4px;
+}
+.wa-name-en {
+    margin-top: calc(4px * var(--kt));
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: calc(14px * var(--kt));
+    font-weight: 600;
+    color: var(--cat);
+    text-transform: uppercase;
+    letter-spacing: 2.2px;
+}
+
+/* ===== 6. 一句话速记 ===== */
+.wa-tag {
+    margin-top: calc(12px * var(--kt));
+    border-left: 4px solid var(--cat);
+    border-radius: 0 8px 8px 0;
+    background: var(--tag-soft);
+    padding: calc(8px * var(--kt)) calc(13px * var(--kt));
+    font-size: calc(14.5px * var(--kt));
+    line-height: 1.7;
+    color: var(--tag-soft-fg);
+    font-weight: 600;
+}
+
+/* ===== 7. 两个小节 + English Corner ===== */
+.wa-body { margin-top: calc(6px * var(--kt)); }
+.wa-sec { margin-top: calc(15px * var(--kt)); }
+.wa-sec-label {
+    display: flex;
+    align-items: center;
+    gap: calc(7px * var(--kt));
+    font-size: calc(10.5px * var(--kt));
+    font-weight: 800;
+    letter-spacing: 2.4px;
+    color: var(--cat);
+    text-transform: uppercase;
+}
+.wa-sec-label::before {
+    content: '';
+    width: calc(16px * var(--kt));
+    height: calc(3px * var(--kt));
+    background: var(--cat);
+    border-radius: 3px;
+    flex: 0 0 auto;
+}
+.wa-para {
+    margin-top: calc(7px * var(--kt));
+    font-size: calc(15px * var(--kt));
+    line-height: 1.9;
+    color: var(--body-ink);
+}
+
+.wa-ec {
+    margin-top: calc(15px * var(--kt));
+    background: var(--tag-soft);
+    border: 1px solid var(--tag-soft-line);
+    border-left: 4px solid var(--cat);
+    border-radius: 12px;
+    padding: calc(12px * var(--kt)) calc(15px * var(--kt)) calc(13px * var(--kt));
+}
+.wa-ec-head {
+    font-size: calc(10.5px * var(--kt));
+    font-weight: 800;
+    letter-spacing: 2.6px;
+    text-transform: uppercase;
+    color: var(--cat);
+    margin-bottom: calc(7px * var(--kt));
+}
+.wa-ec-text {
+    font-size: calc(15px * var(--kt));
+    font-weight: 700;
+    color: var(--strong);
+    line-height: 1.55;
+    font-family: Georgia, 'Times New Roman', serif;
+}
+.wa-ec-ex {
+    margin-top: calc(7px * var(--kt));
+    font-size: calc(15px * var(--kt));
+    font-style: italic;
+    color: var(--body-ink);
+    line-height: 1.6;
+    font-family: Georgia, 'Times New Roman', serif;
+}
+.wa-ec-ex::before {
+    content: 'e.g. ';
+    font-style: normal;
+    font-size: calc(11px * var(--kt));
+    font-weight: 700;
+    letter-spacing: .8px;
+    color: var(--cat);
+}
+.wa-ec-zh {
+    margin-top: calc(6px * var(--kt));
+    font-size: calc(13px * var(--kt));
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+/* ===== 8. 出处署名（数据作者的 source attribution，一律保留） ===== */
+.wa-source {
+    margin-top: calc(14px * var(--kt));
+    padding-top: calc(9px * var(--kt));
+    border-top: 1px dashed var(--card-line);
+    font-size: calc(11px * var(--kt));
+    color: var(--muted);
+    letter-spacing: .4px;
+}
+.wa-source b { font-weight: 700; letter-spacing: 1.2px; }
+
+/* ===== 9. 分类彩皮肤：卡底跟着分组色淡染 =====
+   ⚠️ 这几条必须写在**卡片内**选择器上：自定义属性的 var() 在声明它的元素上就替换完了，
+   写成 html.skin-category{--x:color-mix(...,var(--cat))} 会取到 fallback。 */
+html.skin-category .wa-root {
+    background: color-mix(in srgb, var(--cat) 7%, #fff);
+    border-color: color-mix(in srgb, var(--cat) 22%, #fff);
+    border-top-color: var(--cat);
+}
+@supports not (background: color-mix(in srgb, red 10%, white)) {
+    html.skin-category .wa-root { background: #f4f6f9; border-color: #dfe3e9; }
+}
+html.skin-category .wa-tag,
+html.skin-category .wa-ec { background: color-mix(in srgb, var(--cat) 9%, #fff); }

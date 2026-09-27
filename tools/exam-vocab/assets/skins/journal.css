@@ -1,0 +1,191 @@
+/* ==========================================================================
+   exam-vocab · 皮肤 2 / Journal（手帐词签）· 样式
+   --------------------------------------------------------------------------
+   与原模板 42 的分工完全一致：**布局 / 配色 / 间距 / 倾斜 / 阴影全部由
+   journal.js 里的 Tailwind 工具类表达**，本文件只补 Tailwind 写不出来的部分：
+     · 字体栈（圆体 / 手写英文）、荧光笔划线、贴纸按钮（含悬停与按压动画）
+     · 字号缩放：Markup 里写的是 text-[length:calc(px*var(--card-font-scale))]，
+       这里凡是「跟着字号走的盒子」同样乘倍率（铁律：字号乘倍率、盒子必须同倍率）
+     · 遮住态纹理条、纸纹、标记态虚线框
+
+   ⚠️ 两条约束：
+     1. **不要自己写 `<style type="text/tailwindcss">`**。Tailwind 的 browser 构建
+        只会内联它自己的默认 `@import "tailwindcss"`；一旦我们自己写 style 块，
+        里面的裸模块名（theme / utilities）会原样留在产物里，浏览器再去取
+        /tailwindcss/theme ⇒ 404。空着不写，反而会自己内联进来（含 preflight）。
+        preflight 落在 `@layer base`，而 app.css 的 reset 也已经被包进 `@layer base`
+        （层级顺序 base < theme < components < utilities），所以不会二次重置。
+     2. **不要写 [data-tooltip]::after 气泡**。原版 cardCss 里有，但外壳已经用
+        #global-tooltip 统一处理 [data-tooltip] 了，两套并存会同时冒出两个提示。
+   ========================================================================== */
+
+.skin-journal {
+  --fs: var(--card-font-scale, 1);
+  /* 按钮/图标缩放曲线（用户 2026-09-21 拍板）：与文字同比例、缩小不缩按钮、上限 1.8 */
+  --ew-scale: clamp(1, var(--card-font-scale, 1), 1.8);
+  --jc-ink: #5a4632;
+  --jc-line: #f3e5cd;
+  --jc-paper: #fffdf8;
+  --jc-shadow: 0 2px 5px rgba(120, 90, 50, .16), inset 0 -2px 0 rgba(120, 90, 50, .06);
+
+  /* 极淡纸纹（增强）：叠在 Tailwind 的 bg-[#fdf7ec] 之上，用 background-image 不抢
+     background-color，所以与工具类不冲突。 */
+  background-image:
+    repeating-linear-gradient(45deg, rgba(120, 90, 50, .028) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(-45deg, rgba(120, 90, 50, .018) 0 1px, transparent 1px 11px);
+}
+
+/* ---------- 字体：原版那套圆体 + 手写英文 ---------- */
+.jc-card {
+  font-family: "Yuanti SC", "YouYuan", "PingFang SC", "Hiragino Sans GB",
+               "Microsoft YaHei", sans-serif;
+}
+.jc-word {
+  font-family: "Chalkboard SE", "Comic Sans MS", "Yuanti SC",
+               "PingFang SC", sans-serif;
+}
+
+/* ---------- 荧光笔划线标签（原版 .jc-label + .hl-o/.hl-p） ---------- */
+.jc-label {
+  display: inline-block;
+  font-size: calc(13.5px * var(--fs));
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #6b4f35;
+  padding: 0 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+.skin-journal .hl-o { background: linear-gradient(180deg, transparent 38%, #ffd9a3 38% 84%, transparent 84%); }
+.skin-journal .hl-p { background: linear-gradient(180deg, transparent 38%, #ffc9d6 38% 84%, transparent 84%); }
+/* hl-g 是新增的：给例句贴纸用一档青绿，避免四张纸都用同两色 */
+.skin-journal .hl-g { background: linear-gradient(180deg, transparent 38%, #c9ecdf 38% 84%, transparent 84%); }
+
+/* 原版最抓眼的细节：`.jc-label` 是 display:inline-block，但释义标签的父级是
+   `flex flex-col`（align-items 默认 stretch），于是这颗 inline-block 被拉满整栏
+   —— `.hl-p` 的渐变就成了一道**贯穿整行的高亮笔划**。这是原版的本来面貌，
+   移植时必须复现，不然后半行空着、观感立刻变差。
+   （「单词」标签的父级是 row flex + items-center，所以它照旧贴着文字。） */
+.skin-journal .jc-label.hl-p { display: block; }
+
+/* 例句里的目标词：手帐这边用黄荧光笔划一下（太空站那边是金色虚线下划线，
+   两个皮肤各自的"笔"不同，符合它们各自的隐喻）。 */
+.skin-journal .hl {
+  background: linear-gradient(180deg, transparent 40%, #ffe6ad 40% 90%, transparent 90%);
+  font-weight: 700;
+}
+
+/* ---------- 胶带 ---------- */
+.skin-journal .jc-tape {
+  box-shadow: 0 1px 3px rgba(120, 60, 40, .16);
+  border-radius: 1px;
+}
+
+/* ---------- 元信息标签（原版是装饰词「记忆/复习/应用」，现在装真实字段） ---------- */
+.skin-journal .jc-tag {
+  font-size: calc(11px * var(--fs));
+  font-weight: 700;
+  color: #7a5636;
+  padding: calc(2px * var(--fs)) calc(11px * var(--fs));
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.skin-journal .jc-tag-a { background: #fde3c1; }
+.skin-journal .jc-tag-b { background: #fcd9e2; }
+.skin-journal .jc-tag-c { background: #d9f0e4; }
+
+/* ---------- 小装饰：序号 / 图章 / 爪印行 ---------- */
+.skin-journal .jc-index { font-size: calc(11px * var(--fs)); letter-spacing: .5px; }
+.skin-journal .jc-stamp { font-size: calc(10px * var(--fs)); }
+.skin-journal .jc-paw   { font-size: calc(11.5px * var(--fs)); }
+
+/* ---------- 贴纸按钮（原版 .jc-btn，含悬停上浮 / 按压摇晃 / 每颗专属色） ---------- */
+.skin-journal .jc-actions { display: flex; gap: 7px; flex: 0 0 auto; }
+.skin-journal .jc-btn {
+  flex: 0 0 auto;
+  width: calc(36px * var(--ew-scale));
+  height: calc(36px * var(--ew-scale));
+  border-radius: 50%;
+  border: 2px solid #ecd9bd;
+  background: #fff;
+  font-size: calc(15px * var(--ew-scale));
+  font-family: inherit;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--jc-shadow);
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease, color .12s ease;
+}
+.skin-journal .jc-btn i { display: block; line-height: 1; }
+.skin-journal .jc-btn:hover { transform: translateY(-2px) scale(1.06); box-shadow: 0 4px 9px rgba(120, 90, 50, .2); }
+.skin-journal .jc-btn:active { transform: translateY(0) scale(.95); animation: jc-wig .5s ease; }
+
+/* 每颗按钮专属色：爪印=猫橙 / 眼睛=青 / 狗头=汪棕 / 猫头=猫粉 */
+.skin-journal .act-play { color: #ef9550; border-color: #f6c894; background: #fff4e6; }
+.skin-journal .act-eye  { color: #4f9c88; border-color: #bfe0d6; background: #eef8f4; }
+.skin-journal .act-mark { color: #bd8a55; border-color: #e0bf94; background: #fbf2e4; }
+.skin-journal .act-fav  { color: #ef8fa8; border-color: #f6c0cf; background: #fdeef3; }
+/* 激活：整颗填成专属色（原版只给「标记/收藏」做了，这里四颗都做） */
+.skin-journal .jc-btn.is-active { color: #fff; }
+.skin-journal .act-play.is-active { background: #ef9550; border-color: #ef9550; }
+.skin-journal .act-eye.is-active  { background: #4f9c88; border-color: #4f9c88; }
+.skin-journal .act-mark.is-active { background: #bd8a55; border-color: #bd8a55; }
+.skin-journal .act-fav.is-active  { background: #ef8fa8; border-color: #ef8fa8; }
+
+/* 例句那颗眼睛小一号 */
+.skin-journal .jc-btn.example-toggle-btn {
+  width: calc(28px * var(--ew-scale));
+  height: calc(28px * var(--ew-scale));
+  font-size: calc(12px * var(--ew-scale));
+}
+
+/* 原版是 cardJs 里绑 click 加 .jc-wig 类；皮肤不许绑事件，改用 :active 触发同一段动画 */
+@keyframes jc-wig {
+  0%, 100% { transform: rotate(0) scale(1); }
+  25% { transform: rotate(-14deg) scale(1.08); }
+  55% { transform: rotate(11deg) scale(1.08); }
+  80% { transform: rotate(-6deg) scale(1); }
+}
+
+/* ---------- 遮住态：斜线涂改条占位（保住行高，揭开/收回不跳版） ----------
+   原版没有遮住态（中文一直露着）。这里要「有一条东西在那儿」而不是一根
+   横条纹路 —— 斜向铅笔涂改更像手帐里把字划掉，也更轻。 */
+.skin-journal .jc-redact {
+  display: block;
+  height: 1em;
+  border-radius: 4px;
+  background: repeating-linear-gradient(78deg,
+    rgba(184, 160, 124, .30) 0 1.5px, rgba(255, 255, 255, 0) 1.5px 7px);
+}
+
+/* ---------- 例句贴纸：逐张轻微歪斜（增强，原版没有例句区） ---------- */
+.skin-journal .jc-example:nth-child(odd)  { transform: rotate(-.35deg); }
+.skin-journal .jc-example:nth-child(even) { transform: rotate(.3deg); }
+
+/* ---------- 标记态：虚线外框 + 小猫贴纸点亮（原版只有按钮变色，卡面没有反馈） ---------- */
+.skin-journal.highlighted::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 22px;
+  border: 2px dashed rgba(214, 132, 132, .45);
+  pointer-events: none;
+}
+.skin-journal.highlighted .jc-cat {
+  background: #fff3e6;
+  border-color: #f0a05a;
+  color: #e07a2a;
+  /* 必须重复 Tailwind 的 -translate-x-1/2 -rotate-6：本规则未被分层，会整条覆盖掉它们 */
+  transform: translateX(-50%) rotate(-6deg) scale(1.06);
+}
+
+/* ---------- 显示 / 隐藏 ---------- */
+.skin-journal .hide { display: none; }
+
+/* ---------- 窄屏：两栏改一栏 ---------- */
+@media (max-width: 640px) {
+  .skin-journal { flex-direction: column; }
+  .skin-journal > div[class*="basis-[42%]"] { flex-basis: auto; width: 100%; }
+}

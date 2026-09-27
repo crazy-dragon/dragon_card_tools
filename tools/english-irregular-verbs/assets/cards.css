@@ -1,0 +1,322 @@
+/* ==========================================================================
+   卡面：英语不规则动词（.iv-*）—— 忠实移植原模板 + 增强
+   --------------------------------------------------------------------------
+   原版设计（照搬）：五型各一套色（--grp 主色 / --soft 底 / --bdr 边 / --txt 深字），
+   .iv-badge 型号胶囊、.iv-base 衬线大字 + .iv-zh 释义胶囊、
+   .iv-forms 三格变形（原形 → 过去式 → 过去分词，箭头分格）、
+   .iv-ex 例句块（左侧竖线 + 衬线斜体 + 动词加粗）、
+   引导卡 .iv-g-pattern 规律框 / .iv-g-rule / .iv-g-tip、总览卡 .iv-ov 五行。
+
+   工具侧增强（相对模板）：
+     · 自测模式：.iv-f.dim 把词换成 · · ·，点格子揭开（data-reveal）
+     · 动作按钮钉右上角右轨 .dc-acts（与其它工具同几何）
+     · 字号全部 ×var(--kt)（--k=1.0：动词三格吃原版字号即可）
+
+   五型色（从原模板原样搬来）：
+     AAA 蓝 #2f6ac0 · AAB 青 #0e8f84 · ABA 绿 #2f9e44 · ABB 橙 #d05c17 · ABC 紫 #7c44b4
+   ========================================================================== */
+
+/* ===== 1. 五型色（每套皮肤一套；墨玻璃用亮色版） ===== */
+.iv-AAA { --grp: #2f6ac0; --soft: #e7f0fc; --bdr: #c4d8f3; --txt: #2a5fae; }
+.iv-AAB { --grp: #0e8f84; --soft: #e0f4f2; --bdr: #b6e2dd; --txt: #0b7a71; }
+.iv-ABA { --grp: #2f9e44; --soft: #e6f4e9; --bdr: #c3e3cb; --txt: #27813a; }
+.iv-ABB { --grp: #d05c17; --soft: #fbeae0; --bdr: #f2cdb6; --txt: #b94f12; }
+.iv-ABC { --grp: #7c44b4; --soft: #f2ebfb; --bdr: #ddc9f1; --txt: #6f3ba8; }
+.iv-overview { --grp: var(--accent); --soft: var(--tag-soft); --bdr: var(--tag-soft-line); --txt: var(--accent); }
+html.skin-glass .iv-AAA { --grp: #7fa9e8; --soft: #232c3d; --bdr: #3d4a66; --txt: #a9c6f2; }
+html.skin-glass .iv-AAB { --grp: #5ecfc4; --soft: #1f3230; --bdr: #2f4a46; --txt: #8fe0d6; }
+html.skin-glass .iv-ABA { --grp: #7fd18e; --soft: #223127; --bdr: #33543c; --txt: #a3e0ae; }
+html.skin-glass .iv-ABB { --grp: #eda06b; --soft: #382a1e; --bdr: #5a412c; --txt: #f7bd93; }
+html.skin-glass .iv-ABC { --grp: #c19bf0; --soft: #322a40; --bdr: #4c3d63; --txt: #d8c0f7; }
+html.skin-glass .iv-overview { --grp: var(--accent); --soft: var(--tag-soft); --bdr: var(--tag-soft-line); --txt: var(--accent); }
+
+/* 衬线字库：英文动词与例句（原版同款 Georgia） */
+.iv-base, .iv-f-w, .iv-ex-en, .iv-g-pattern, .iv-badge {
+    font-family: Georgia, "Times New Roman", serif;
+}
+
+/* ==========================================================================
+   2. 卡片
+   ========================================================================== */
+.iv-root {
+    position: relative;
+    box-sizing: border-box;
+    border-radius: 18px;
+    /* 右 158px = 右轨留白，固定不缩放 */
+    padding: calc(15px * var(--kt)) 158px calc(15px * var(--kt)) calc(20px * var(--kt));
+    margin-bottom: 16px;
+    color: var(--card-ink);
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: 4px solid var(--grp);
+    box-shadow: 0 6px 18px rgba(93, 78, 46, .07);
+    display: flex;
+    flex-direction: column;
+}
+html.skin-glass .iv-root { backdrop-filter: blur(14px) saturate(140%); }
+
+/* 动作轨道 */
+.dc-acts {
+    position: absolute;
+    right: 14px;
+    top: 11px;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 13px;
+    background: var(--acts-bg);
+    border: 1px solid var(--acts-line);
+    z-index: 2;
+}
+.dc-acts button {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.dc-acts button:hover { background: var(--act-hover); color: var(--accent); }
+.dc-acts button:active { transform: scale(.94); }
+.dc-acts button.act-mark.is-active { color: var(--gold); }
+.dc-acts button.act-fav.is-active { color: var(--rose); }
+
+/* 型号胶囊 */
+.iv-top {
+    display: flex;
+    align-items: center;
+    gap: calc(8px * var(--kt));
+    margin-bottom: calc(4px * var(--kt));
+}
+.iv-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(6px * var(--kt));
+    /* 卡根是 column flex（align-items 默认 stretch），徽章直接放在卡根上会被拉满宽
+       （总览卡就是这么排的）—— 必须钉住主轴起点 */
+    align-self: flex-start;
+    font-size: calc(12.5px * var(--kt));
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    padding: calc(4px * var(--kt)) calc(13px * var(--kt));
+    border-radius: 999px;
+    color: #fff;
+    background: var(--grp);
+}
+.iv-badge .cn {
+    font-family: -apple-system, "PingFang SC", "Segoe UI", sans-serif;
+    font-size: calc(11px * var(--kt));
+    font-weight: 600;
+    letter-spacing: .5px;
+}
+
+/* 原形 + 释义 */
+.iv-base-line {
+    display: flex;
+    align-items: baseline;
+    gap: calc(12px * var(--kt));
+    margin-top: calc(9px * var(--kt));
+    flex-wrap: wrap;
+}
+.iv-base {
+    font-size: calc(30px * var(--kt));
+    font-weight: 900;
+    color: var(--strong);
+    line-height: 1.2;
+    letter-spacing: -.3px;
+}
+.iv-zh {
+    font-size: calc(14px * var(--kt));
+    font-weight: 600;
+    color: var(--body-ink);
+    background: var(--tag-soft);
+    padding: calc(3px * var(--kt)) calc(12px * var(--kt));
+    border-radius: 999px;
+}
+
+/* 三格变形 */
+.iv-forms {
+    display: flex;
+    align-items: stretch;
+    gap: calc(6px * var(--kt));
+    margin-top: calc(13px * var(--kt));
+}
+.iv-f {
+    flex: 1 1 0;
+    min-width: 0;
+    background: var(--soft);
+    border: 1px solid var(--bdr);
+    border-radius: calc(12px * var(--kt));
+    padding: calc(9px * var(--kt)) calc(10px * var(--kt)) calc(10px * var(--kt));
+    text-align: center;
+    transition: border-color .15s;
+}
+.iv-f-tag {
+    display: block;
+    font-size: calc(10px * var(--kt));
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    color: var(--txt);
+    text-transform: uppercase;
+    margin-bottom: calc(4px * var(--kt));
+}
+.iv-f-w {
+    display: block;
+    font-size: calc(17px * var(--kt));
+    font-weight: 700;
+    color: var(--strong);
+    word-break: break-all;
+    line-height: 1.3;
+}
+/* 自测隐藏态：词换成 · · ·（点格子揭开） */
+.iv-f.dim { cursor: pointer; }
+.iv-f.dim .iv-f-w {
+    color: var(--muted);
+    letter-spacing: .5px;
+    font-weight: 600;
+}
+.iv-f.dim:hover { border-color: var(--grp); }
+.iv-arrow {
+    align-self: center;
+    color: var(--grp);
+    font-size: calc(15px * var(--kt));
+    font-weight: 900;
+    flex: 0 0 auto;
+}
+
+/* 例句块 */
+.iv-ex {
+    margin-top: calc(13px * var(--kt));
+    background: var(--tag-soft);
+    border-left: 3px solid var(--grp);
+    border-radius: 0 calc(10px * var(--kt)) calc(10px * var(--kt)) 0;
+    padding: calc(9px * var(--kt)) calc(14px * var(--kt)) calc(10px * var(--kt));
+}
+.iv-ex-tag {
+    font-size: calc(10px * var(--kt));
+    font-weight: 800;
+    letter-spacing: 1.8px;
+    color: var(--txt);
+    text-transform: uppercase;
+    margin-bottom: calc(4px * var(--kt));
+}
+.iv-ex-en {
+    font-size: calc(14.5px * var(--kt));
+    line-height: 1.65;
+    color: var(--body-ink);
+    font-style: italic;
+    cursor: pointer;
+}
+.iv-ex-en:hover { color: var(--strong); }
+.iv-ex-en b { font-weight: 800; color: var(--grp); font-style: normal; }
+.iv-ex-zh {
+    margin-top: calc(3px * var(--kt));
+    font-size: calc(12.5px * var(--kt));
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+/* 引导卡 */
+.iv-g-title {
+    margin-top: calc(10px * var(--kt));
+    font-size: calc(21px * var(--kt));
+    font-weight: 900;
+    color: var(--strong);
+    letter-spacing: .2px;
+}
+.iv-g-pattern {
+    margin-top: calc(12px * var(--kt));
+    font-size: calc(23px * var(--kt));
+    font-weight: 900;
+    color: var(--strong);
+    background: var(--soft);
+    border: 1px solid var(--bdr);
+    border-radius: calc(13px * var(--kt));
+    padding: calc(11px * var(--kt)) calc(15px * var(--kt));
+    text-align: center;
+    line-height: 1.5;
+    letter-spacing: .5px;
+}
+.iv-g-rule {
+    margin-top: calc(12px * var(--kt));
+    font-size: calc(14.5px * var(--kt));
+    line-height: 1.85;
+    color: var(--body-ink);
+}
+.iv-g-tip {
+    margin-top: calc(11px * var(--kt));
+    font-size: calc(13px * var(--kt));
+    line-height: 1.7;
+    color: var(--body-ink);
+    background: var(--tag-soft);
+    border: 1px dashed var(--bdr);
+    border-radius: calc(10px * var(--kt));
+    padding: calc(8px * var(--kt)) calc(13px * var(--kt));
+}
+
+/* 总览卡：五行速查 */
+.iv-intro {
+    margin-top: calc(10px * var(--kt));
+    font-size: calc(14px * var(--kt));
+    line-height: 1.8;
+    color: var(--body-ink);
+}
+.iv-ov { margin-top: calc(12px * var(--kt)); display: flex; flex-direction: column; gap: calc(7px * var(--kt)); }
+.iv-ov-row {
+    display: flex;
+    align-items: center;
+    gap: calc(10px * var(--kt));
+    padding: calc(8px * var(--kt)) calc(12px * var(--kt));
+    background: var(--soft);
+    border: 1px solid var(--bdr);
+    border-radius: calc(10px * var(--kt));
+}
+.iv-ov-dot {
+    width: calc(12px * var(--kt));
+    height: calc(12px * var(--kt));
+    border-radius: 999px;
+    flex: 0 0 auto;
+}
+.iv-ov-type {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: calc(15px * var(--kt));
+    font-weight: 900;
+    color: var(--txt);
+    width: calc(44px * var(--kt));
+}
+.iv-ov-rule { font-size: calc(14px * var(--kt)); font-weight: 600; color: var(--body-ink); }
+.iv-ov-ex {
+    margin-left: auto;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: calc(13px * var(--kt));
+    font-weight: 700;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   3. 分组彩皮肤：卡底跟型色淡染
+   （必须写在卡片内选择器上 —— var() 在声明它的元素上就替换完了） */
+html.skin-category .iv-root {
+    background: color-mix(in srgb, var(--grp) 6%, #fff);
+    border-color: color-mix(in srgb, var(--grp) 20%, #fff);
+    border-top-color: var(--grp);
+}
+@supports not (background: color-mix(in srgb, red 10%, white)) {
+    html.skin-category .iv-root { background: #f7f6f2; border-color: #e0ddd2; }
+}
+
+/* 窄屏 */
+@media (max-width: 720px) {
+    .iv-root { padding-right: calc(20px * var(--kt)); }
+    .dc-acts { right: 8px; top: 8px; }
+    .dc-acts button { width: 34px; height: 34px; font-size: 17px; }
+}

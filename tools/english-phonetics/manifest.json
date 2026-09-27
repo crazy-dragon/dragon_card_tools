@@ -1,0 +1,24 @@
+{
+  "name": "音标拼读 · English Phonetics",
+  "description": "48 个音标 + 109 条自然拼读合成一个工具：顶栏切换，音素真录音点读、例词浏览器朗读、标记/收藏、三套皮肤、一键隐藏英文",
+  "lang": "zh",
+  "fields": [
+    "kind",
+    "sym",
+    "cat",
+    "spell",
+    "sec",
+    "pattern",
+    "sound",
+    "rule",
+    "ex",
+    "tip"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "word_play",
+    "word_mark",
+    "favorite_toggle"
+  ],
+  "cardsJson": "../dragoncard/default_cards/english_phonetics/cards.json"
+}

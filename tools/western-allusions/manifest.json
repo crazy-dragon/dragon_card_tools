@@ -1,0 +1,24 @@
+{
+  "name": "西方典故 · Western Allusions",
+  "description": "37 张西方典故双语卡（希腊神话 13 / 罗马与历史 4 / 圣经 8 / 文学与童话 12）：分组配色、一句话速记、中文故事 + 现代用法 + English Corner、出处署名。按分组分节显示，标记/收藏、朗读、三套皮肤。",
+  "lang": "zh",
+  "fields": [
+    "group",
+    "groupZh",
+    "nameZh",
+    "nameEn",
+    "tagline",
+    "story",
+    "usageZh",
+    "ecText",
+    "ecExample",
+    "ecZh",
+    "sourceZh"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "word_mark",
+    "favorite_toggle"
+  ],
+  "cardsJson": "../dragoncard/default_cards/western_allusions/cards.json"
+}

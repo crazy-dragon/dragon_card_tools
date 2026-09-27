@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>元素周期表</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='5' y='5' width='90' height='90' rx='14' fill='%233b82f6'/><text x='50' y='50' font-size='24' font-weight='bold' text-anchor='middle' fill='white'>1</text><text x='50' y='84' font-size='42' font-weight='bold' text-anchor='middle' fill='white'>H</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="assets/app.css">
+  <link rel="stylesheet" href="assets/cards.css">
+  <script>
+    /* 化学元素周期表：128 张（118 个元素 + 10 张科普卡），两种视图由顶栏分段控件切换 ——
+         table = 真·元素周期表（7 周期 × 18 族，镧系/锕系抽成下方两行；点格子**就地弹窗**）
+         card  = 卡片（118 张元素翻面卡，后面接着 10 张「从大爆炸到元素生成」科普卡）
+       没有眼睛：中文名/英文名都是学习内容，始终显示；背面靠翻面揭示。
+
+       点格子为什么是弹窗而不是"跳到那张卡"：周期表是**查阅面**，跳卡片等于换页，
+       看 5 个元素就要来回切 5 次、表里的位置感全丢。弹窗把正反两面一次铺开
+       （不必再翻），关掉就回到原处。弹窗里的卡面就是列表里那一张 ——
+       同一套 .cp-root / .cp-front / .cp-back 标记，数据血缘不动。 */
+    window.DC_TOOL = {
+      title: '元素周期表',
+      voiceLang: 'zh',
+      views: [
+        { id: 'table', label: '周期表' },
+        { id: 'card',  label: '卡片' }
+      ]
+    };
+  </script>
+</head>
+<body>
+  <div class="layout-row">
+    <div class="main-content">
+      <div class="study-top-bar">
+        <div class="seg" id="view-seg"></div>
+        <span id="study-deck-title" class="study-deck-title"></span>
+        <span style="flex:1"></span>
+        <button id="font-settings-btn" class="top-btn" data-tooltip="字号">
+          <i class="fa-solid fa-font"></i>
+        </button>
+        <div class="control-group">
+          <button class="top-btn voice-select-btn" data-tooltip="朗读音色">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+          <div class="voice-dropdown" style="display:none;">
+            <div class="voice-dropdown-header">选择音色 · 中文</div>
+            <div class="voice-list"></div>
+          </div>
+        </div>
+        <button class="top-btn" id="scroll-top-btn" data-tooltip="回到顶部">
+          <i class="fa-solid fa-arrow-up"></i>
+        </button>
+        <button class="top-btn" id="scroll-bottom-btn" data-tooltip="到最底部">
+          <i class="fa-solid fa-arrow-down"></i>
+        </button>
+        <button id="card-view-btn" class="top-btn" data-tooltip="单卡模式">
+          <i class="fa-solid fa-grip"></i>
+        </button>
+        <div class="skin-toggle-wrap" id="skin-toggle-wrap">
+          <button id="style-btn" class="top-btn" data-tooltip="皮肤">
+            <i class="fa-solid fa-palette"></i>
+          </button>
+          <div class="skin-dropdown" id="style-dropdown" style="display:none;">
+            <div class="skin-dropdown-header"><i class="fa-solid fa-palette"></i> <span>皮肤</span></div>
+            <div class="skin-list" id="style-list"></div>
+          </div>
+        </div>
+        <button id="refresh-stats" class="stats-text" data-tooltip="刷新">
+          <i class="fa-solid fa-arrows-rotate"></i>
+          <span>0 / 0</span>
+        </button>
+      </div>
+      <div class="study-scroll" id="study-scroll">
+        <div class="study-content">
+          <div id="study-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="font-drawer" class="font-drawer" style="display:none;">
+    <div class="setting-item">
+      <label>字号</label>
+      <div class="control">
+        <button id="font-size-minus">&minus;</button>
+        <span id="font-size-value" class="value">100%</span>
+        <button id="font-size-plus">+</button>
+      </div>
+    </div>
+    <button id="reset-fonts" class="reset-btn">复位</button>
+  </div>
+
+  <!-- 点周期表格子 → 就地弹窗。里面的卡面由 app.js 的 renderElementModal() 注入，
+       和列表里的元素卡是同一套 .cp-front / .cp-back，只是不套 .cp-flip（正反同屏）。 -->
+  <div class="cp-modal-mask" id="element-modal" hidden>
+    <div class="cp-modal-box" id="element-modal-box" role="dialog" aria-modal="true" aria-label="元素详情" tabindex="-1"></div>
+  </div>
+
+  <div id="global-tooltip" class="action-btn-tooltip"></div>
+  <div id="toast" class="toast"></div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

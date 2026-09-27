@@ -1,0 +1,21 @@
+{
+  "name": "考试词汇词卡 · Exam Vocabulary",
+  "description": "高中/四级/六级/考研通用词卡：目录分页、列表/单卡、播放·偷看·标记·收藏，三套皮肤（通用/手帐/太空站）；标题与考试徽章按卡组名自动切换，不合并卡组数据",
+  "lang": "zh",
+  "fields": [
+    "word",
+    "phonetic_us",
+    "paraphrase_en",
+    "paraphrase_zh",
+    "examples",
+    "coca_rank",
+    "form_note"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "definition_view",
+    "word_mark",
+    "favorite_toggle",
+    "example_view"
+  ]
+}

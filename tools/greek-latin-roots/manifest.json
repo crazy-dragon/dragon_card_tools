@@ -1,0 +1,21 @@
+{
+  "name": "Greek & Latin Roots",
+  "description": "152 Latin & Greek root cards with 597 derivatives, in a low-fatigue cool grey-green reading design. Front shows the root alone; tap or flip to reveal meaning, derivatives (tagged TOP500 / TOP2k / SUPP) and an etymology note. Origin-tinted accent (Greek vs Latin), pronounce / flip / mark / favorite, three skins. Interface is English-only.",
+  "lang": "en",
+  "fields": [
+    "no",
+    "origin",
+    "root",
+    "meaning_en",
+    "derivatives",
+    "etymology",
+    "mnemonic"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "flip",
+    "word_mark",
+    "favorite_toggle"
+  ],
+  "cardsJson": "../memory_market_goods/greek_latin_roots/cards.json"
+}

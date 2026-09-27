@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>英语不规则动词</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80'>V</text></svg>">
+  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="assets/app.css">
+  <link rel="stylesheet" href="assets/cards.css">
+  <script>
+    /* 英语不规则动词 200：五型（AAA/AAB/ABA/ABB/ABC）各一张引导卡 + 动词卡。
+       列表本身就是「总览 → 引导 → 该型动词」的天然分节，所以只有一个卡片视图；
+       顶栏给两件模板做不到的事：
+         quiz  自测模式 —— 藏起过去式/过去分词（显示 · · ·），点格子揭开；
+         group 五型筛选 —— 只刷某一型的动词。
+       朗读：🔊 读原形，点例句读整句（都是浏览器 TTS，en-US）。 */
+    window.DC_TOOL = {
+      title: '英语不规则动词',
+      voiceLang: 'en-US',
+      views: [
+        { id: 'card', label: '动词表' }
+      ],
+      groups: ['AAA', 'AAB', 'ABA', 'ABB', 'ABC'],
+      groupNames: { AAA: '三形相同', AAB: '原形=过去式', ABA: '原形=过去分词', ABB: '过去式=过去分词', ABC: '三形全不同' }
+    };
+  </script>
+</head>
+<body>
+  <div class="layout-row">
+    <div class="main-content">
+      <div class="study-top-bar">
+        <div class="seg" id="group-seg"></div>
+        <span id="study-deck-title" class="study-deck-title"></span>
+        <span style="flex:1"></span>
+        <button id="quiz-btn" class="top-btn" data-tooltip="自测：藏起过去式/过去分词">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </button>
+        <button id="font-settings-btn" class="top-btn" data-tooltip="字号">
+          <i class="fa-solid fa-font"></i>
+        </button>
+        <div class="control-group">
+          <button class="top-btn voice-select-btn" data-tooltip="英语朗读音色">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+          <div class="voice-dropdown" style="display:none;">
+            <div class="voice-dropdown-header">选择音色 · English</div>
+            <div class="voice-list"></div>
+          </div>
+        </div>
+        <button class="top-btn" id="scroll-top-btn" data-tooltip="回到顶部">
+          <i class="fa-solid fa-arrow-up"></i>
+        </button>
+        <button class="top-btn" id="scroll-bottom-btn" data-tooltip="到最底部">
+          <i class="fa-solid fa-arrow-down"></i>
+        </button>
+        <button id="card-view-btn" class="top-btn" data-tooltip="单卡模式">
+          <i class="fa-solid fa-grip"></i>
+        </button>
+        <div class="skin-toggle-wrap" id="skin-toggle-wrap">
+          <button id="style-btn" class="top-btn" data-tooltip="皮肤">
+            <i class="fa-solid fa-palette"></i>
+          </button>
+          <div class="skin-dropdown" id="style-dropdown" style="display:none;">
+            <div class="skin-dropdown-header"><i class="fa-solid fa-palette"></i> <span>皮肤</span></div>
+            <div class="skin-list" id="style-list"></div>
+          </div>
+        </div>
+        <button id="refresh-stats" class="stats-text" data-tooltip="刷新">
+          <i class="fa-solid fa-arrows-rotate"></i>
+          <span>0 / 0</span>
+        </button>
+      </div>
+      <div class="study-scroll" id="study-scroll">
+        <div class="study-content">
+          <div id="study-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="font-drawer" class="font-drawer" style="display:none;">
+    <div class="setting-item">
+      <label>字号</label>
+      <div class="control">
+        <button id="font-size-minus">&minus;</button>
+        <span id="font-size-value" class="value">100%</span>
+        <button id="font-size-plus">+</button>
+      </div>
+    </div>
+    <button id="reset-fonts" class="reset-btn">复位</button>
+  </div>
+
+  <div id="global-tooltip" class="action-btn-tooltip"></div>
+  <div id="toast" class="toast"></div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

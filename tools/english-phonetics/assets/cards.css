@@ -1,0 +1,293 @@
+/* ==========================================================================
+   卡面：音标卡（.ipa-*）与拼读卡（.ph-*）
+   --------------------------------------------------------------------------
+   这是「音标拼读」小工具唯一的卡面文件（模板时代的 cardCss 已经废弃，
+   卡面不再由卡组模板提供 —— 一个工具就一种版面）。
+
+   版面 = P4 档（用户拍板）：
+     · 列宽 620px（在 app.css 的 .study-content 上）
+     · 卡内文字整体 ×1.45 —— 变量 --k；工具自带的字号缩放 --card-font-scale
+       再乘上去，两者合成 --kt（定义在 app.css 的 :root，改了会整卡跟着变）
+     · 动作按钮钉在卡片右上角（R1 右轨）：right/top 与按钮尺寸都**不随 --k 走**，
+       所以任何卡、任何列宽、任何字号下按钮都在同一个 x 上，鼠标不用横移
+     · 音标/拼写与例词同排（.dc-main 里放 .dc-chips）——
+       主行只放一个符号时那一行天生撑不满，把例词提上来才不空
+
+   类名：两种卡共用 .dc-* 那一套（.dc-top / .dc-tag / .dc-main / .dc-chips /
+   .dc-chip / .dc-sub / .dc-tip / .dc-acts / .dc-alt / .dc-intro）；
+   只有根（.ipa-root / .ph-root）和大字号那一两个（.ipa-sym / .ph-pat / .ph-sound）
+   分开写 —— 它们本来就不同。
+
+   颜色全部走变量（在 app.css 的 html.skin-* 里定义），三套皮肤共用这一份结构；
+   只有「分类彩」需要跟着卡片的 --cat 走，那几条写在文件末尾，用的是卡片内选择器
+   （⚠️ 不能写成 html.skin-category{--x:color-mix(...,var(--cat))}：自定义属性的
+   var() 在声明它的元素上就替换完了，那会儿卡片还不存在，会取到 fallback）。
+   ========================================================================== */
+
+/* ===== 1. 卡盒 ===== */
+.ipa-root, .ph-root {
+    position: relative;
+    box-sizing: border-box;
+    border-radius: 18px;
+    /* 右 158px = 右轨留白（14px 边距 + 128px 按钮组 + 16px 余量），固定不缩放 */
+    padding: calc(13px * var(--kt)) 158px calc(15px * var(--kt)) calc(16px * var(--kt));
+    margin-bottom: 16px;
+    color: var(--card-ink);
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    box-shadow: 0 6px 18px rgba(93, 78, 46, .07);
+}
+html.skin-glass .ipa-root,
+html.skin-glass .ph-root { backdrop-filter: blur(14px) saturate(140%); }
+
+/* ===== 2. 顶行：类别胶囊 + 类别英文名 ===== */
+.dc-top {
+    display: flex;
+    align-items: center;
+    gap: calc(8px * var(--kt));
+    margin-bottom: calc(9px * var(--kt));
+    flex-wrap: wrap;
+}
+.dc-tag {
+    font-size: calc(14px * var(--kt));
+    line-height: 1;
+    padding: calc(5px * var(--kt)) calc(11px * var(--kt));
+    border-radius: 999px;
+    font-weight: 700;
+    white-space: nowrap;
+    background: var(--tag-bg);
+    color: var(--tag-fg);
+    border: 1px solid var(--tag-line);
+}
+.dc-tag-en {
+    font-size: calc(14px * var(--kt));
+    line-height: 1;
+    font-weight: 700;
+    color: var(--muted);
+}
+
+/* ===== 3. 动作轨道（右上角，所有卡同一个 x） ===== */
+.dc-acts {
+    position: absolute;
+    right: 14px;
+    top: 11px;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 13px;
+    background: var(--acts-bg);
+    border: 1px solid var(--acts-line);
+    z-index: 2;
+}
+.dc-acts button {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.dc-acts button:hover { background: var(--act-hover); color: var(--accent); }
+.dc-acts button:active { transform: scale(.94); }
+
+/* 音素录音播放中：按钮下沿走一条进度线（播的是 assets/phonemes/*.mp3，不是 TTS） */
+.dc-acts button.playing { background: var(--act-hover); color: var(--accent); position: relative; }
+.dc-acts button.playing::after {
+    content: "";
+    position: absolute;
+    left: 9px;
+    right: 9px;
+    bottom: 7px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    opacity: .55;
+    animation: dc-audio-bar .9s linear infinite;
+}
+@keyframes dc-audio-bar {
+    0%   { transform: scaleX(.15); transform-origin: left; }
+    50%  { transform: scaleX(1);   transform-origin: left; }
+    100% { transform: scaleX(.15); transform-origin: left; }
+}
+
+/* ===== 4. 主行：符号 / 拼写 + 音标 + 例词同排 ===== */
+.dc-main {
+    display: flex;
+    align-items: center;
+    gap: calc(12px * var(--kt));
+    flex-wrap: wrap;
+}
+.ipa-sym {
+    font-size: calc(46px * var(--kt));
+    line-height: 1.08;
+    font-weight: 800;
+    letter-spacing: .5px;
+    color: var(--strong);
+    font-family: "Charis SIL", "Gentium Plus", "Doulos SIL", Georgia, serif;
+}
+.ph-pat {
+    font-size: calc(38px * var(--kt));
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: .5px;
+    color: var(--strong);
+}
+.ph-sound {
+    font-size: calc(19px * var(--kt));
+    font-weight: 700;
+    color: var(--accent);
+    font-family: "Charis SIL", "Gentium Plus", "Doulos SIL", Georgia, serif;
+}
+
+/* 4.1 美音对应标注：只有「英美不是同一个音」或「美音没有这个音」的卡片才有 */
+.dc-alt {
+    font-size: calc(13px * var(--kt));
+    line-height: 1;
+    font-weight: 600;
+    padding: calc(4px * var(--kt)) calc(9px * var(--kt));
+    border-radius: 999px;
+    white-space: nowrap;
+    background: var(--alt-bg);
+    color: var(--alt-fg);
+    border: 1px solid var(--alt-line);
+    font-family: "Charis SIL", "Gentium Plus", "Doulos SIL", Georgia, serif;
+}
+.dc-alt.none {
+    background: var(--alt-warn-bg);
+    color: var(--alt-warn-fg);
+    border-color: var(--alt-warn-line);
+}
+
+/* ===== 5. 常见拼写 / 英文规则（拼读卡那句是英文，眼睛关掉时隐藏） ===== */
+.dc-sub {
+    margin-top: calc(7px * var(--kt));
+    font-size: calc(14px * var(--kt));
+    line-height: 1.6;
+    color: var(--ink2);
+}
+.dc-sub b { font-weight: 700; color: var(--strong); }
+
+/* ===== 6. 例词胶囊（点一下读单词 = 浏览器 TTS） ===== */
+.dc-chips { display: flex; flex-wrap: wrap; gap: calc(9px * var(--kt)); }
+.dc-chip {
+    display: inline-flex;
+    align-items: baseline;
+    border-radius: 12px;
+    padding: calc(6px * var(--kt)) calc(13px * var(--kt));
+    font-size: calc(15px * var(--kt));
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    background: var(--chip-bg);
+    color: var(--chip-ink);
+    border: 1px solid var(--chip-line);
+    transition: transform .1s, border-color .15s;
+}
+.dc-chip:hover { border-color: var(--accent); }
+.dc-chip:active { transform: scale(.96); }
+.dc-chip .p {
+    margin-left: calc(7px * var(--kt));
+    font-size: calc(13px * var(--kt));
+    font-weight: 500;
+    color: var(--chip-muted);
+    font-family: "Charis SIL", "Gentium Plus", "Doulos SIL", Georgia, serif;
+}
+
+/* ===== 7. 中文要领 ===== */
+.dc-tip {
+    margin-top: calc(13px * var(--kt));
+    padding: 1px 0 1px calc(13px * var(--kt));
+    border-left: 3px solid var(--accent);
+    font-size: calc(16px * var(--kt));
+    line-height: 1.62;
+    color: var(--card-ink);
+}
+
+/* ===== 8. 引导卡（两种 kind 各一张，共 2 张） =====
+   参照用户要求做到最简：标题 + 一句话 + 一个算式 + 色标 + 一句怎么用。
+   原来那段长英文、10 行陷阱表、二段英文说明全部砍掉。
+   不吃右轨留白（没按钮），也**不参与字号缩放**（一次性卡片，本来字就大）。 */
+.dc-intro {
+    box-sizing: border-box;
+    border-radius: 18px;
+    padding: 18px 20px 20px;
+    margin-bottom: 16px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    box-shadow: 0 6px 18px rgba(93, 78, 46, .07);
+    color: var(--card-ink);
+}
+html.skin-glass .dc-intro { backdrop-filter: blur(14px) saturate(140%); }
+.dc-intro h2 { font-size: 22px; font-weight: 800; color: var(--strong); }
+.dc-intro h2 .en { font-weight: 600; font-size: 15px; color: var(--muted); }
+.dc-intro .lead { margin-top: 6px; font-size: 15px; color: var(--ink2); }
+.dc-intro .formulas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+.dc-intro .fml b {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    background: var(--fml-bg);
+    border: 1px solid var(--fml-line);
+    color: var(--strong);
+}
+.dc-intro .fml span { font-size: 15px; color: var(--muted); }
+.dc-intro .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.dc-intro .legend .lg {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--chip-bg);
+    border: 1px solid var(--chip-line);
+    color: var(--ink2);
+}
+.dc-intro .legend .lg i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.dc-intro .use {
+    margin-top: 14px;
+    padding-top: 12px;
+    font-size: 14px;
+    color: var(--ink2);
+    border-top: 1px dashed var(--card-line);
+}
+
+/* ===== 9. 眼睛：默认关掉英文（顶栏那个 👁 英文 按钮） =====
+   关掉的是「英文解释」——类别英文名、拼读卡那句英文 rule、引导卡的英文标题；
+   留下的是「学习内容」——音标符号、例词与例词音标、中文要领。
+   拼读卡上那句 rule 一个人占了全部英文字母的 51.4%，关掉它卡片立刻干净。 */
+html.eye-off .dc-tag-en,
+html.eye-off .dc-sub.en,
+html.eye-off .dc-intro h2 .en { display: none !important; }
+
+/* ===== 10. 分类彩皮肤：这几条必须跟着卡片的 --cat 走，所以写在卡片内选择器上 ===== */
+html.skin-category .ipa-root,
+html.skin-category .ph-root {
+    background: color-mix(in srgb, var(--cat) 8%, #fff);
+    border-color: color-mix(in srgb, var(--cat) 24%, #fff);
+}
+@supports not (background: color-mix(in srgb, red 10%, white)) {
+    html.skin-category .ipa-root,
+    html.skin-category .ph-root { background: #f4f6f9; border-color: #dfe3e9; }
+}
+html.skin-category .dc-tag {
+    background: var(--cat);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+}
+html.skin-category .ph-sound { color: var(--cat); }
+html.skin-category .dc-tip { border-left-color: var(--cat); }
+html.skin-category .dc-acts button:hover { background: rgba(255, 255, 255, .85); color: var(--cat); }
+html.skin-category .dc-chip:hover { border-color: color-mix(in srgb, var(--cat) 40%, #fff); }

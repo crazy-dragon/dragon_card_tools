@@ -1,0 +1,195 @@
+/* ==========================================================================
+   exam-vocab · 皮肤 3 / Space Station（太空站词卡）· 样式
+   --------------------------------------------------------------------------
+   与原模板 43 的分工一致：**布局 / 间距 / 配色 / 渐变 / 胶囊 / 舱单框全部由
+   space.js 里的 Tailwind 工具类表达**，本文件只补 Tailwind 写不出来的部分
+   （原版 cardCss 只有 2.3 KB，这里加的多出来的都是"增强"那几项）：
+     · 字体栈、星野伪元素、行星体积感与轨道环、读数发光
+     · 3D 认领后的清洗（.sp-planet-live 去掉 CSS 行星、只留 canvas）
+     · 加密锁条 + 解密闪烁、卡片组徽章、动作按钮、标记态
+     · 字号缩放：跟字号走的盒子同样乘倍率
+
+   ⚠️ 不写 [data-tooltip]::after 气泡 —— 外壳 #global-tooltip 已经统一处理，
+      原版那套并存会同时冒出两个提示。
+   ========================================================================== */
+
+.skin-space {
+  --fs: var(--card-font-scale, 1);
+  --ew-scale: clamp(1, var(--card-font-scale, 1), 1.8);
+  --neon: #7ee7ff;
+  --neon-2: #5eead4;
+  --sp-line: rgba(140, 160, 230, .4);
+
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+/* ---------- 星野（原版双层重复点阵）+ 极慢明暗呼吸（增强） ---------- */
+.sc-card::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, .16) 1px, transparent 1px),
+    radial-gradient(rgba(255, 255, 255, .09) 1px, transparent 1px);
+  background-size: 60px 60px, 37px 37px;
+  background-position: 0 0, 18px 24px;
+  animation: sp-twinkle 9s ease-in-out infinite;
+}
+@keyframes sp-twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .62; }
+}
+
+/* ---------- 行星：CSS 兜底（3D 认领后由 .sp-planet-live 清掉） ---------- */
+.sp-planet {
+  background: radial-gradient(circle at 32% 30%, #7ee7ff 0%, #4f7df5 45%, #3b3fa8 80%, #232463 100%);
+  box-shadow: 0 0 34px rgba(90, 130, 255, .45), inset -12px -14px 30px rgba(0, 0, 20, .5);
+}
+.sp-planet::after {            /* 星球高光 */
+  content: '';
+  position: absolute; top: 12px; left: 16px; width: 34px; height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .5);
+  filter: blur(4px);
+  transform: rotate(-24deg);
+}
+.sp-ring {                     /* 轨道环：椭圆 + 前后透明度不对称 */
+  position: absolute; top: 50%; left: 50%;
+  width: 190px; height: 64px;
+  border-radius: 50%;
+  border: 2px solid rgba(140, 220, 255, .4);
+  border-bottom-color: rgba(140, 220, 255, .12);
+  transform: translate(-50%, -50%) rotate(-16deg);
+  pointer-events: none;
+}
+/* three.js 认领成功：撤掉 CSS 行星与光环，改让 canvas 顶上 */
+.sp-planet.sp-planet-live { background: none; box-shadow: none; }
+.sp-planet.sp-planet-live::after { content: none; }
+.sp-planet.sp-planet-live .sp-ring { display: none; }
+.sp-planet canvas { display: block; width: 100%; height: 100%; }
+
+/* ---------- 单词：衬线 + 霓虹发光（原版 .sc-word） ---------- */
+.sc-word {
+  font-family: Georgia, "Times New Roman", serif;
+  text-shadow: 0 0 18px rgba(110, 160, 255, .65);
+}
+
+/* ---------- 例句里的目标词高亮（原版 cardCss 就有这条，移植时别丢） ---------- */
+.sc-log-en .hl {
+  color: #ffd76e;
+  font-weight: 600;
+  text-decoration: underline dotted rgba(255, 215, 110, .5);
+  text-underline-offset: 3px;
+}
+
+/* ---------- 双语标签胶囊（原版是 Tailwind 里写死的青色/琥珀色） ---------- */
+.sp-chip {
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  padding: calc(2.5px * var(--fs)) calc(8px * var(--fs));
+  border-radius: 4px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.sp-chip-en { border-color: rgba(94, 234, 212, .4); background: rgba(94, 234, 212, .14); color: #5eead4; }
+.sp-chip-zh { border-color: rgba(250, 190, 80, .4); background: rgba(250, 190, 80, .13); color: #fcd34d; }
+
+/* ---------- 卡组徽章（增强：原版只有 COCA 胶囊） ---------- */
+.sp-badge {
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  padding: calc(2px * var(--fs)) calc(8px * var(--fs));
+  border-radius: 999px;
+  color: var(--neon);
+  border: 1px solid rgba(126, 231, 255, .38);
+  background: rgba(126, 231, 255, .10);
+  white-space: nowrap;
+}
+
+/* ---------- 加密锁条：未解读的占位（增强） ---------- */
+.sp-redact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  min-width: 38%;          /* 只留一个挂锁图标会像颗小胶囊；给点宽度才读得出"这一行被遮住" */
+  min-height: 1.35em;
+  padding: 0 10px;
+  border-radius: 5px;
+  color: rgba(126, 231, 255, .55);
+  font-size: calc(10px * var(--fs));
+  letter-spacing: 2px;
+  background:
+    repeating-linear-gradient(90deg,
+      rgba(126, 231, 255, .10) 0 8px,
+      rgba(126, 231, 255, .02) 8px 16px);
+  border: 1px dashed rgba(126, 231, 255, .28);
+}
+.sp-redact i { font-size: calc(10px * var(--fs)); }
+
+/* 刚揭开的一瞬闪一下（每次重渲染都会重新播，正好当"解密完成"的反馈） */
+.sp-decrypted { animation: sp-decrypt .42s steps(4) both; }
+@keyframes sp-decrypt {
+  0%   { opacity: .15; filter: blur(2px); }
+  50%  { opacity: .75; filter: blur(.6px); }
+  100% { opacity: 1; filter: none; }
+}
+
+/* ---------- 站位读数角标（增强） ---------- */
+.sp-station {
+  color: rgba(143, 160, 216, .55);
+  letter-spacing: 1.6px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  pointer-events: none;
+}
+
+/* ---------- 动作按钮：深色仪表键（原版 .sc-btn） ---------- */
+.sp-actions { z-index: 5; }
+.sc-btn {
+  position: relative;
+  flex: 0 0 auto;
+  width: calc(34px * var(--ew-scale));
+  height: calc(34px * var(--ew-scale));
+  border-radius: 50%;
+  border: 1px solid var(--sp-line);
+  background: rgba(20, 32, 74, .7);
+  color: #9fb0e8;
+  font-size: calc(14px * var(--ew-scale));
+  font-family: inherit;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .12s ease, color .12s, border-color .12s, background .12s;
+}
+.sc-btn i { display: block; line-height: 1; }
+.sc-btn:hover { transform: translateY(-2px); color: var(--neon); border-color: var(--neon); }
+.sc-btn:active { transform: translateY(0) scale(.92); }
+.sc-btn.is-active {
+  color: #0c1230;
+  background: linear-gradient(135deg, #7ee7ff, #5eead4);
+  border-color: transparent;
+}
+/* 例句那颗眼睛小一号，免得压过舱单标题 */
+.sc-btn.example-toggle-btn {
+  width: calc(26px * var(--ew-scale));
+  height: calc(26px * var(--ew-scale));
+  font-size: calc(11px * var(--ew-scale));
+  background: rgba(20, 32, 74, .5);
+}
+
+/* ---------- 标记态（原版只有按钮变色，卡面没有反馈） ---------- */
+.skin-space.highlighted {
+  border-color: rgba(126, 231, 255, .5);
+  box-shadow: 0 0 0 1px rgba(126, 231, 255, .25), 0 0 34px -10px rgba(126, 231, 255, .45);
+}
+
+/* ---------- 显示 / 隐藏 ---------- */
+.skin-space .hide { display: none; }
+
+/* ---------- 窄屏：立柱改横排 ---------- */
+@media (max-width: 640px) {
+  .skin-space { flex-direction: column; }
+  .skin-space > div[class*="basis-[230px]"] { flex-basis: auto; padding-bottom: 0; }
+  .skin-space > div:nth-child(2) { padding-left: 14px; padding-right: 14px; }
+}

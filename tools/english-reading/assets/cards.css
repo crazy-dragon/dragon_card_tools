@@ -1,0 +1,178 @@
+/* ==========================================================================
+   卡面：双语阅读（.rd-*）—— 长文阅读卡
+   --------------------------------------------------------------------------
+   结构：.rd-head（章节标题 + 作者）/ .rd-seg（原文·对照·译文 三段切换）/
+         .rd-en（英文原文，衬线，EN 签）/ .rd-zh（中文译文，译 签，可点读）。
+
+   ⚠️ 原文 300-400 字、译文 100+ 字，正文用 --kt 缩放；英文用衬线（书卷气）。
+   ⚠️ .rd-seg 是卡内组件，不是顶栏 seg —— 类名刻意区分开。
+   ========================================================================== */
+
+.rd-en {
+    font-family: "Iowan Old Style", "Palatino Linotype", Georgia, "Songti SC", serif;
+}
+
+/* ==========================================================================
+   1. 卡片视图
+   ========================================================================== */
+.rd-root {
+    position: relative;
+    box-sizing: border-box;
+    border-radius: 18px;
+    /* 右 158px = 右轨留白，固定不缩放 */
+    padding: calc(16px * var(--kt)) 158px calc(15px * var(--kt)) calc(20px * var(--kt));
+    margin-bottom: 16px;
+    color: var(--card-ink);
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: 4px solid var(--accent);
+    box-shadow: 0 6px 18px rgba(93, 78, 46, .07);
+    display: flex;
+    flex-direction: column;
+    gap: calc(10px * var(--kt));
+    overflow: hidden;
+}
+html.skin-glass .rd-root { backdrop-filter: blur(14px) saturate(140%); }
+
+/* 动作轨道（与其它小工具逐字相同：右上角，所有卡同一个 x） */
+.dc-acts {
+    position: absolute;
+    right: 14px;
+    top: 11px;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 13px;
+    background: var(--acts-bg);
+    border: 1px solid var(--acts-line);
+    z-index: 2;
+}
+.dc-acts button {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.dc-acts button:hover { background: var(--act-hover); color: var(--accent); }
+.dc-acts button:active { transform: scale(.94); }
+.dc-acts button.act-mark.is-active { color: var(--gold); }
+.dc-acts button.act-fav.is-active { color: var(--rose); }
+
+/* 头部 */
+.rd-head {
+    display: flex;
+    flex-direction: column;
+    gap: calc(3px * var(--kt));
+    min-width: 0;
+    padding-right: calc(8px * var(--kt));
+}
+.rd-title {
+    font-size: calc(20px * var(--kt));
+    font-weight: 800;
+    color: var(--strong);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+.rd-author {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(6px * var(--kt));
+    font-size: calc(12.5px * var(--kt));
+    color: var(--muted);
+    line-height: 1.6;
+}
+.rd-author i { font-size: calc(11px * var(--kt)); opacity: .8; }
+
+/* 卡内三段切换：原文 / 对照 / 译文 */
+.rd-seg {
+    align-self: flex-start;
+    display: inline-flex;
+    padding: 2px;
+    border-radius: 10px;
+    background: var(--seg-bg);
+    border: 1px solid var(--seg-line);
+    gap: 2px;
+}
+.rd-seg button {
+    padding: calc(2px * var(--kt)) calc(12px * var(--kt));
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    font-size: calc(12px * var(--kt));
+    line-height: 1.7;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.rd-seg button:hover { color: var(--accent); }
+.rd-seg button.on {
+    background: var(--seg-on-bg);
+    color: var(--seg-on-fg);
+    font-weight: 700;
+}
+
+/* 原文 / 译文 正文块 */
+.rd-en, .rd-zh {
+    position: relative;
+    padding-left: calc(38px * var(--kt));
+    font-size: calc(15.5px * var(--kt));
+    line-height: 1.95;
+    overflow-wrap: anywhere;
+}
+.rd-en { color: var(--body-ink); }
+.rd-zh {
+    color: var(--body-ink);
+    cursor: pointer;
+    border-top: 1px dashed var(--line-2);
+    padding-top: calc(10px * var(--kt));
+}
+.rd-zh:hover { color: var(--accent); }
+
+/* 语言签：EN / 译 */
+.rd-lang {
+    position: absolute;
+    left: 0;
+    top: calc(4px * var(--kt));
+    min-width: calc(26px * var(--kt));
+    text-align: center;
+    padding: 0 calc(4px * var(--kt));
+    border-radius: 6px;
+    background: var(--tag-soft);
+    border: 1px solid var(--tag-soft-line);
+    color: var(--tag-soft-fg);
+    font-size: calc(10px * var(--kt));
+    font-weight: 800;
+    letter-spacing: .05em;
+    line-height: 1.8;
+    user-select: none;
+}
+.rd-zh .rd-lang {
+    background: var(--chip-bg);
+    border-color: var(--chip-line);
+    color: var(--chip-ink);
+}
+
+/* ==========================================================================
+   2. 窄屏
+   ========================================================================== */
+@media (max-width: 760px) {
+    .rd-root { padding-right: calc(20px * var(--kt)); }
+}
+
+/* ==========================================================================
+   3. 皮肤（只换颜色，不动版式）
+   ========================================================================== */
+html.skin-category .rd-root { border-top-width: 5px; }
+html.skin-category .rd-title { color: var(--primary-dark); }
+html.skin-category .rd-en { color: var(--primary-dark); }

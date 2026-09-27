@@ -1,0 +1,480 @@
+/* ==========================================================================
+   卡面：周易（.yj-*）—— 一 zip 双卡组
+   --------------------------------------------------------------------------
+   deck 2 周易64卦（mode='gua'）：
+     chart 卦序方图   行=上卦、列=下卦的 8×8 真方图（先天八卦序：乾兑离震巽坎艮坤），
+                      行头/列头各画一个三爻小卦；点格子 = 读卦名 + 跳到那张卦卡。
+     card  卦卡       六爻卦画 + Unicode 卦符 ䷀–䷿ + 卦名/拼音 + 上/下经 + 卦象
+                      结构 + 卦辞（点读）+ 白话释义。
+   deck 3 周易入门（mode='intro'）：19 张概念卡，单视图；diagram 里的 "111"/"000"
+                      三画码由工具画成三爻小卦图。
+
+   ★ 卦画方向（64/64 验证过，别改）★
+     数据 lines 是**自上而下**编码：lines[0] = 顶爻，前 3 位 = 上卦。
+     三画码自洽表：乾111 兑011 离101 震001 巽110 坎010 艮100 坤000。
+     ⇒ .yj-lines / .yj-mini / .yj-diagram 都是**普通的 column flex**，
+       第一个子元素天然在最上 —— 只要照数组顺序 append，方向就是对的。
+       ⚠️ 千万别改成 column-reverse / justify-content: flex-end，
+       那会把 64 卦全部上下颠倒（这也是原模板的 bug）。
+     验证基准：第 11 卦「泰」lines = 000111（坤上乾下）—— 前三位 000 是三个
+       阴爻，必须画在**上面**；后三位 111 是三个阳爻，画在下面。
+
+   配色 = 上卦（外卦）所属的八卦，八色一组。
+   ========================================================================== */
+
+/* ===== 1. 八卦色（上卦决定卡/格子的主色；也是方图行头的色） ===== */
+.yj-root, .c-cell { --cat: var(--accent); }          /* 兜底：不属于八卦的入门卡 */
+.yj-root.tr-0, .c-cell.tr-0 { --cat: #a67c00; }      /* 乾 天 */
+.yj-root.tr-1, .c-cell.tr-1 { --cat: #c2572d; }      /* 兑 泽 */
+.yj-root.tr-2, .c-cell.tr-2 { --cat: #d0342c; }      /* 离 火 */
+.yj-root.tr-3, .c-cell.tr-3 { --cat: #2e7d5b; }      /* 震 雷 */
+.yj-root.tr-4, .c-cell.tr-4 { --cat: #0e8f84; }      /* 巽 风 */
+.yj-root.tr-5, .c-cell.tr-5 { --cat: #2f6ac0; }      /* 坎 水 */
+.yj-root.tr-6, .c-cell.tr-6 { --cat: #7c44b4; }      /* 艮 山 */
+.yj-root.tr-7, .c-cell.tr-7 { --cat: #64748b; }      /* 坤 地 */
+html.skin-glass .yj-root.tr-0, html.skin-glass .c-cell.tr-0 { --cat: #ffd782; }
+html.skin-glass .yj-root.tr-1, html.skin-glass .c-cell.tr-1 { --cat: #e08a5f; }
+html.skin-glass .yj-root.tr-2, html.skin-glass .c-cell.tr-2 { --cat: #f0857e; }
+html.skin-glass .yj-root.tr-3, html.skin-glass .c-cell.tr-3 { --cat: #6bcf9f; }
+html.skin-glass .yj-root.tr-4, html.skin-glass .c-cell.tr-4 { --cat: #5fc9bd; }
+html.skin-glass .yj-root.tr-5, html.skin-glass .c-cell.tr-5 { --cat: #7fa9e8; }
+html.skin-glass .yj-root.tr-6, html.skin-glass .c-cell.tr-6 { --cat: #c19bf0; }
+html.skin-glass .yj-root.tr-7, html.skin-glass .c-cell.tr-7 { --cat: #9c94b0; }
+
+/* 卦名 / 卦辞走衬线（经文感）；卦符要能落到含 U+4DC0 块的字库上 */
+.yj-name, .yj-intro-title, .yj-judgment, .yj-body, .c-name {
+    font-family: "Songti SC", "STSong", "SimSun", "PingFang SC", serif;
+}
+.yj-symbol, .c-symbol {
+    font-family: "Songti SC", "STSong", "Apple Symbols", "Segoe UI Symbol",
+                 "Noto Sans Symbols 2", "Noto Sans Symbols", serif;
+}
+
+/* ==========================================================================
+   2. 卡根（卦卡 / 入门卡共用）
+   ========================================================================== */
+.yj-root {
+    position: relative;
+    box-sizing: border-box;
+    border-radius: 18px;
+    /* 右 158px = 右轨留白，固定不缩放 */
+    padding: calc(16px * var(--kt)) 158px calc(15px * var(--kt)) calc(20px * var(--kt));
+    margin-bottom: 16px;
+    color: var(--card-ink);
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: 4px solid var(--cat);
+    box-shadow: 0 6px 18px rgba(93, 78, 46, .07);
+    min-height: calc(230px * var(--kt));
+    display: flex;
+    flex-direction: column;
+}
+
+/* 动作轨道（与别的工具逐字相同：右上角，所有卡同一个 x） */
+.dc-acts {
+    position: absolute;
+    right: 14px;
+    top: 11px;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 13px;
+    background: var(--acts-bg);
+    border: 1px solid var(--acts-line);
+    z-index: 2;
+}
+.dc-acts button {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.dc-acts button:hover { background: var(--act-hover); color: var(--accent); }
+.dc-acts button:active { transform: scale(.94); }
+.dc-acts button.act-mark.is-active { color: var(--gold); }
+.dc-acts button.act-fav.is-active { color: var(--rose); }
+
+/* ==========================================================================
+   3. 卦卡
+   ========================================================================== */
+.yj-top {
+    display: flex;
+    align-items: center;
+    gap: calc(7px * var(--kt));
+    margin-bottom: calc(4px * var(--kt));
+    flex-wrap: wrap;
+}
+.yj-no {
+    display: inline-flex;
+    align-items: center;
+    font-size: calc(12px * var(--kt));
+    font-weight: 800;
+    padding: calc(4px * var(--kt)) calc(11px * var(--kt));
+    border-radius: 999px;
+    background: var(--cat);
+    color: #fff;
+    white-space: nowrap;
+}
+.yj-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: calc(11.5px * var(--kt));
+    font-weight: 700;
+    padding: calc(4px * var(--kt)) calc(10px * var(--kt));
+    border-radius: 999px;
+    background: var(--tag-soft);
+    color: var(--tag-soft-fg);
+    border: 1px solid var(--tag-soft-line);
+    white-space: nowrap;
+}
+.yj-chip.yj-struct-chip {
+    color: var(--cat);
+    border-color: color-mix(in srgb, var(--cat) 35%, transparent);
+}
+
+.yj-mid {
+    display: flex;
+    align-items: center;
+    gap: calc(18px * var(--kt));
+    margin: calc(8px * var(--kt)) 0 calc(12px * var(--kt));
+}
+
+/* 卦画 + 卦符（整体是一个淡底的"卦牌"） */
+.yj-hex {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(9px * var(--kt));
+    padding: calc(11px * var(--kt)) calc(14px * var(--kt));
+    border-radius: calc(14px * var(--kt));
+    background: var(--tag-soft);
+    border: 1px solid var(--tag-soft-line);
+}
+.yj-lines {
+    /* ⚠️ 普通 column flex：第一个子元素在最上 —— lines[0]=顶爻，顺序 append 即可 */
+    display: flex;
+    flex-direction: column;
+    gap: calc(6px * var(--kt));
+    width: calc(92px * var(--kt));
+}
+.hex-line {
+    width: 100%;
+    height: calc(9px * var(--kt));
+    border-radius: calc(2px * var(--kt));
+    background-color: transparent;
+}
+.hex-line.yang { background-color: var(--strong); }
+.hex-line.yin {
+    background-image: linear-gradient(to right,
+        var(--strong) 0 41%, transparent 41% 59%, var(--strong) 59% 100%);
+}
+.yj-symbol {
+    font-size: calc(38px * var(--kt));
+    line-height: 1;
+    color: var(--cat);
+}
+
+/* 卦名 / 拼音 / 上下卦 */
+.yj-head { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: calc(9px * var(--kt)); }
+.yj-name {
+    font-size: calc(40px * var(--kt));
+    line-height: 1.15;
+    font-weight: 800;
+    letter-spacing: .06em;
+    color: var(--strong);
+    display: flex;
+    align-items: baseline;
+    gap: calc(10px * var(--kt));
+    flex-wrap: wrap;
+}
+.yj-py {
+    font-size: calc(14px * var(--kt));
+    font-weight: 600;
+    font-style: italic;
+    letter-spacing: normal;
+    color: var(--muted);
+}
+.yj-tris { display: flex; gap: calc(8px * var(--kt)); flex-wrap: wrap; }
+.yj-tri {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(6px * var(--kt));
+    font-size: calc(12px * var(--kt));
+    font-weight: 700;
+    padding: calc(4px * var(--kt)) calc(10px * var(--kt));
+    border-radius: 999px;
+    background: var(--btn-bg);
+    border: 1px solid var(--card-line);
+    color: var(--ink2);
+    white-space: nowrap;
+}
+/* 三爻小卦（也是三画码的画布；同样从上往下画） */
+.yj-mini {
+    display: inline-flex;
+    flex-direction: column;
+    gap: calc(3px * var(--kt));
+    width: calc(26px * var(--kt));
+    flex: none;
+}
+.yj-mini .hex-line { height: calc(3.5px * var(--kt)); }
+
+/* 卦辞（点读） */
+.yj-judgment {
+    display: flex;
+    align-items: flex-start;
+    gap: calc(10px * var(--kt));
+    width: 100%;
+    padding: calc(11px * var(--kt)) calc(13px * var(--kt));
+    border-radius: calc(12px * var(--kt));
+    background: var(--tag-soft);
+    border: 1px solid var(--tag-soft-line);
+    color: var(--body-ink);
+    font-size: calc(16px * var(--kt));
+    line-height: 1.7;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+}
+.yj-judgment:hover { border-color: var(--cat); color: var(--strong); }
+.yj-jl {
+    flex: none;
+    font-family: 'Inter', -apple-system, "PingFang SC", sans-serif;
+    font-size: calc(10.5px * var(--kt));
+    font-weight: 800;
+    letter-spacing: .5px;
+    padding: calc(3px * var(--kt)) calc(8px * var(--kt));
+    border-radius: 999px;
+    background: var(--cat);
+    color: #fff;
+}
+
+/* 白话释义 */
+.yj-meaning {
+    margin-top: auto;
+    padding-top: calc(10px * var(--kt));
+    border-top: 1px dashed var(--card-line);
+    font-size: calc(13.5px * var(--kt));
+    line-height: 1.7;
+    color: var(--body-ink);
+}
+
+/* ==========================================================================
+   4. 入门卡（deck 3）
+   ========================================================================== */
+.yj-intro { padding: calc(22px * var(--kt)) calc(20px * var(--kt)); }
+.yj-intro-row {
+    display: flex;
+    align-items: center;
+    gap: calc(16px * var(--kt));
+    margin-bottom: calc(12px * var(--kt));
+}
+.yj-intro-hex {
+    flex: none;
+    width: calc(86px * var(--kt));
+    padding: calc(12px * var(--kt));
+    border-radius: calc(14px * var(--kt));
+    background: var(--tag-soft);
+    border: 1px solid var(--tag-soft-line);
+    display: flex;
+    justify-content: center;
+}
+.yj-diagram {
+    display: flex;
+    flex-direction: column;
+    gap: calc(5px * var(--kt));
+    width: 100%;
+}
+.yj-intro-head { flex: 1; min-width: 0; }
+.yj-intro-title {
+    font-size: calc(30px * var(--kt));
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: .06em;
+    color: var(--strong);
+    display: flex;
+    align-items: baseline;
+    gap: calc(10px * var(--kt));
+    flex-wrap: wrap;
+}
+.yj-body {
+    font-size: calc(15.5px * var(--kt));
+    line-height: 1.8;
+    color: var(--body-ink);
+}
+.yj-note {
+    margin-top: auto;
+    padding-top: calc(10px * var(--kt));
+    border-top: 1px dashed var(--card-line);
+    font-size: calc(13px * var(--kt));
+    line-height: 1.75;
+    color: var(--muted);
+}
+.yj-note .yj-jl {
+    background: transparent;
+    border: 1px solid var(--card-line);
+    color: var(--muted);
+    margin-right: calc(6px * var(--kt));
+}
+
+/* ==========================================================================
+   5. 卦序方图（9 列：左上角 + 8 个列头）
+   ========================================================================== */
+.yj-chart {
+    display: grid;
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+    gap: calc(6px * var(--kt));
+    align-content: start;
+}
+.c-corner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: calc(9.5px * var(--kt));
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--muted);
+}
+.c-head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(2px * var(--kt));
+    padding: calc(6px * var(--kt)) 0 calc(5px * var(--kt));
+    border-radius: calc(10px * var(--kt));
+    background: var(--tag-soft);
+    border: 1px solid var(--tag-soft-line);
+}
+.c-head b { font-size: calc(12px * var(--kt)); font-weight: 800; color: var(--ink2); }
+.c-rowlabel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(6px * var(--kt));
+    padding: 0 calc(4px * var(--kt));
+    border-radius: calc(10px * var(--kt));
+    background: var(--tag-soft);
+    border: 1px solid var(--tag-soft-line);
+}
+.c-rowlabel b { font-size: calc(12px * var(--kt)); font-weight: 800; color: var(--ink2); }
+
+.c-cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(2px * var(--kt));
+    min-width: 0;
+    min-height: calc(78px * var(--kt));
+    padding: calc(8px * var(--kt)) calc(3px * var(--kt)) calc(6px * var(--kt));
+    border-radius: calc(11px * var(--kt));
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: calc(3px * var(--kt)) solid var(--cat);
+    color: var(--card-ink);
+    cursor: pointer;
+    user-select: none;
+    overflow: hidden;
+    transition: transform .12s ease, box-shadow .15s ease;
+}
+.c-cell:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(93, 78, 46, .12); }
+.c-cell:active { transform: scale(.97); }
+.c-cell.empty {
+    background: transparent;
+    border: 1px dashed var(--card-line);
+    cursor: default;
+    min-height: calc(78px * var(--kt));
+}
+.c-symbol {
+    font-size: calc(26px * var(--kt));
+    line-height: 1.15;
+    color: var(--strong);
+}
+.c-name {
+    max-width: 100%;
+    font-size: calc(11.5px * var(--kt));
+    font-weight: 700;
+    color: var(--card-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.c-no {
+    font-size: calc(9.5px * var(--kt));
+    font-weight: 700;
+    color: var(--muted);
+    line-height: 1.2;
+}
+.c-star {
+    position: absolute;
+    top: calc(4px * var(--kt));
+    right: calc(5px * var(--kt));
+    font-size: calc(10px * var(--kt));
+    color: var(--gold);
+    pointer-events: none;
+}
+.c-fav {
+    position: absolute;
+    top: calc(4px * var(--kt));
+    left: calc(5px * var(--kt));
+    font-size: calc(10px * var(--kt));
+    color: var(--rose);
+    pointer-events: none;
+}
+
+/* 从方图跳过来时闪一下 */
+.yj-flash { animation: yjFlash 1.4s ease; }
+@keyframes yjFlash {
+    0%, 100% { box-shadow: 0 6px 18px rgba(93, 78, 46, .07); }
+    15%, 55% { box-shadow: 0 0 0 3px var(--cat), 0 10px 26px rgba(93, 78, 46, .18); }
+}
+
+/* ==========================================================================
+   6. 皮肤变体
+   （写成卡片内的选择器 —— var() 在声明它的元素上就替换完了，--cat 必须就地用）
+   ========================================================================== */
+html.skin-glass .yj-hex,
+html.skin-glass .yj-intro-hex { background: rgba(255, 255, 255, .06); }
+html.skin-glass .yj-tri { background: rgba(255, 255, 255, .05); }
+
+html.skin-category .yj-root {
+    background: color-mix(in srgb, var(--cat) 7%, #fff);
+    border-color: color-mix(in srgb, var(--cat) 22%, #fff);
+    border-top-color: var(--cat);
+}
+html.skin-category .c-cell {
+    background: color-mix(in srgb, var(--cat) 6%, #fff);
+    border-color: color-mix(in srgb, var(--cat) 20%, #fff);
+    border-top-color: var(--cat);
+}
+html.skin-category .yj-hex,
+html.skin-category .yj-intro-hex { background: #fff; }
+@supports not (background: color-mix(in srgb, red 10%, white)) {
+    html.skin-category .yj-root { background: #f4f6f9; border-color: #dfe3e9; }
+    html.skin-category .c-cell { background: #f8fafc; border-color: #dfe3e9; }
+}
+
+/* ==========================================================================
+   7. 窄屏
+   ========================================================================== */
+@media (max-width: 720px) {
+    .yj-root { padding-right: calc(18px * var(--kt)); min-height: 0; }
+    .dc-acts { right: 8px; top: 8px; }
+    .dc-acts button { width: 34px; height: 34px; font-size: 17px; }
+    .yj-mid { flex-wrap: wrap; }
+    .yj-head { flex: 1 1 100%; }
+    .yj-chart { gap: calc(4px * var(--kt)); }
+    .c-name { font-size: calc(10px * var(--kt)); }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "周易 · 六十四卦与入门",
+  "description": "一 zip 双卡组：绑「周易64卦」时是 卦序方图（上卦×下卦 8×8）+ 卦卡（六爻卦画按正规上下方向绘制、Unicode 卦符 ䷀–䷿、上/下经、卦辞点读、白话释义）；绑「周易入门」时是 19 张入门概念卡（阴阳/四象/八卦/爻…，三画卦图工具自己画）。标记/收藏、中文朗读、三套皮肤。",
+  "lang": "zh",
+  "fields": [
+    "number",
+    "name",
+    "pinyin",
+    "upper",
+    "lower",
+    "lines",
+    "structure",
+    "judgment",
+    "meaning",
+    "title",
+    "diagram",
+    "body",
+    "note"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "word_play",
+    "word_mark",
+    "favorite_toggle"
+  ],
+  "cardsJson": "../dragoncard/default_cards/yijing/cards.json"
+}

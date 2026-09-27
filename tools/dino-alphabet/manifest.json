@@ -1,0 +1,23 @@
+{
+  "name": "恐龙字母表 · Dino Alphabet",
+  "description": "A–Z 26 个字母各配一只恐龙：字母墙（每格是这只恐龙自己的颜色，点格子读「A for Ankylosaurus」并跳卡）+ 卡片视图（大字母、恐龙 emoji、中英文恐龙名、phonics、可点读例词、造型描述、互动彩蛋）。中英双语朗读、标记/收藏、三套皮肤。面向低龄英语启蒙。",
+  "lang": "zh",
+  "fields": [
+    "letter",
+    "dinoEn",
+    "dinoZh",
+    "emoji",
+    "color",
+    "phonics",
+    "sampleWord",
+    "visual",
+    "fun"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "word_play",
+    "word_mark",
+    "favorite_toggle"
+  ],
+  "cardsJson": "../dragoncard/default_cards/dino_alphabet/cards.json"
+}

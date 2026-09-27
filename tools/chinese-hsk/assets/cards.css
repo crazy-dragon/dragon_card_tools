@@ -1,0 +1,408 @@
+/* ==========================================================================
+   卡面：HSK 分级词表（.hk-*）—— 分级词表 / 词卡 两种视图共用一份数据
+   --------------------------------------------------------------------------
+   chart 分级词表  等级 chips + 搜索框 + 词格网格（100/页 + 翻页），
+                   点格子 = 读词（zh）+ 跳到那张词卡。
+   card  词卡      汉字大字（点读 zh）/ 拼音 / 繁体 / 词性 / 英文释义（点读 en）
+                   / Source 署名（每条词自带 definition_source）。
+
+   ⚠️ 大卡组纪律：DOM 任何时刻只渲染一页（100 格 / 50 张）。
+
+   等级色 = HSK 1–6 + 7–9 七档（数据里的 level 字段）。
+   词卡是"词典条目"不是海报：汉字是主角但别顶着天，正文以释义为主。
+   ========================================================================== */
+
+/* ===== 1. 等级色（词格与词卡共用；--cat 由 lv-N 类给出） ===== */
+.hk-root, .c-cell { --cat: var(--accent); }                 /* 兜底：level 缺失 */
+.hk-root.lv-1,   .c-cell.lv-1   { --cat: #2e9e5b; }         /* HSK 1 绿 */
+.hk-root.lv-2,   .c-cell.lv-2   { --cat: #0e8f84; }         /* HSK 2 青 */
+.hk-root.lv-3,   .c-cell.lv-3   { --cat: #2f6ac0; }         /* HSK 3 蓝 */
+.hk-root.lv-4,   .c-cell.lv-4   { --cat: #6a5acd; }         /* HSK 4 靛 */
+.hk-root.lv-5,   .c-cell.lv-5   { --cat: #7c44b4; }         /* HSK 5 紫 */
+.hk-root.lv-6,   .c-cell.lv-6   { --cat: #b3436f; }         /* HSK 6 玫 */
+.hk-root.lv-79,  .c-cell.lv-79  { --cat: #64748b; }         /* HSK 7–9 灰 */
+html.skin-glass .hk-root.lv-1, html.skin-glass .c-cell.lv-1   { --cat: #6bcf9f; }
+html.skin-glass .hk-root.lv-2, html.skin-glass .c-cell.lv-2   { --cat: #5fc9bd; }
+html.skin-glass .hk-root.lv-3, html.skin-glass .c-cell.lv-3   { --cat: #7fa9e8; }
+html.skin-glass .hk-root.lv-4, html.skin-glass .c-cell.lv-4   { --cat: #a29cf0; }
+html.skin-glass .hk-root.lv-5, html.skin-glass .c-cell.lv-5   { --cat: #c19bf0; }
+html.skin-glass .hk-root.lv-6, html.skin-glass .c-cell.lv-6   { --cat: #e08ab4; }
+html.skin-glass .hk-root.lv-79, html.skin-glass .c-cell.lv-79 { --cat: #9c94b0; }
+
+/* 汉字本体走衬线（词典感） */
+.hk-word, .c-word, .hk-trad span {
+    font-family: "Songti SC", "STSong", "SimSun", "PingFang SC", serif;
+}
+
+/* ==========================================================================
+   2. 卡根
+   ========================================================================== */
+.hk-root {
+    position: relative;
+    box-sizing: border-box;
+    border-radius: 18px;
+    /* 右 158px = 右轨留白，固定不缩放 */
+    padding: calc(16px * var(--kt)) 158px calc(14px * var(--kt)) calc(20px * var(--kt));
+    margin-bottom: 16px;
+    color: var(--card-ink);
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: 4px solid var(--cat);
+    box-shadow: 0 6px 18px rgba(93, 78, 46, .07);
+    min-height: calc(170px * var(--kt));
+    display: flex;
+    flex-direction: column;
+}
+
+/* 动作轨道（与别的工具逐字相同：右上角，所有卡同一个 x） */
+.dc-acts {
+    position: absolute;
+    right: 14px;
+    top: 11px;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 13px;
+    background: var(--acts-bg);
+    border: 1px solid var(--acts-line);
+    z-index: 2;
+}
+.dc-acts button {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.dc-acts button:hover { background: var(--act-hover); color: var(--accent); }
+.dc-acts button:active { transform: scale(.94); }
+.dc-acts button.act-mark.is-active { color: var(--gold); }
+.dc-acts button.act-fav.is-active { color: var(--rose); }
+
+/* ==========================================================================
+   3. 词卡内容
+   ========================================================================== */
+.hk-top {
+    display: flex;
+    align-items: center;
+    gap: calc(7px * var(--kt));
+    margin-bottom: calc(8px * var(--kt));
+    flex-wrap: wrap;
+}
+.hk-lv {
+    display: inline-flex;
+    align-items: center;
+    font-size: calc(12px * var(--kt));
+    font-weight: 800;
+    padding: calc(4px * var(--kt)) calc(11px * var(--kt));
+    border-radius: 999px;
+    background: var(--cat);
+    color: #fff;
+    white-space: nowrap;
+}
+.hk-pos {
+    display: inline-flex;
+    align-items: center;
+    font-size: calc(11.5px * var(--kt));
+    font-weight: 700;
+    padding: calc(4px * var(--kt)) calc(10px * var(--kt));
+    border-radius: 999px;
+    background: var(--tag-soft);
+    color: var(--tag-soft-fg);
+    border: 1px solid var(--tag-soft-line);
+    white-space: nowrap;
+}
+
+.hk-mid {
+    display: flex;
+    align-items: baseline;
+    gap: calc(16px * var(--kt));
+    flex-wrap: wrap;
+}
+.hk-word {
+    font-size: calc(46px * var(--kt));
+    line-height: 1.15;
+    font-weight: 700;
+    color: var(--strong);
+    cursor: pointer;
+    transition: color .15s;
+    overflow-wrap: anywhere;
+}
+.hk-word:hover { color: var(--cat); }
+.hk-side { display: flex; flex-direction: column; gap: calc(3px * var(--kt)); min-width: 0; }
+.hk-py {
+    font-size: calc(17px * var(--kt));
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: .02em;
+}
+.hk-trad {
+    font-size: calc(12.5px * var(--kt));
+    color: var(--muted);
+}
+.hk-trad span {
+    font-size: calc(15px * var(--kt));
+    color: var(--ink2);
+    margin-left: calc(4px * var(--kt));
+}
+
+/* 英文释义（点读 en） */
+.hk-def {
+    display: flex;
+    align-items: flex-start;
+    gap: calc(10px * var(--kt));
+    width: 100%;
+    margin-top: calc(10px * var(--kt));
+    padding: calc(11px * var(--kt)) calc(13px * var(--kt));
+    border-radius: calc(12px * var(--kt));
+    background: var(--tag-soft);
+    border: 1px solid var(--tag-soft-line);
+    color: var(--body-ink);
+    font-size: calc(14.5px * var(--kt));
+    line-height: 1.65;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+}
+.hk-def:hover { border-color: var(--cat); color: var(--strong); }
+.hk-def-tag {
+    flex: none;
+    font-size: calc(10.5px * var(--kt));
+    font-weight: 800;
+    letter-spacing: .5px;
+    padding: calc(3px * var(--kt)) calc(8px * var(--kt));
+    border-radius: 999px;
+    background: var(--cat);
+    color: #fff;
+}
+
+/* Source 署名（数据里的 definition_source，逐词自带） */
+.hk-src {
+    margin-top: auto;
+    padding-top: calc(9px * var(--kt));
+    border-top: 1px dashed var(--card-line);
+    font-size: calc(10.5px * var(--kt));
+    color: var(--muted);
+    font-style: italic;
+    letter-spacing: .02em;
+}
+
+/* ==========================================================================
+   4. 分级词表
+   ========================================================================== */
+.hk-toolbar {
+    display: flex;
+    align-items: center;
+    gap: calc(10px * var(--card-font-scale, 1));
+    flex-wrap: wrap;
+    margin-bottom: calc(12px * var(--card-font-scale, 1));
+}
+.hk-chips {
+    display: flex;
+    gap: calc(5px * var(--card-font-scale, 1));
+    flex-wrap: wrap;
+}
+.hk-lvchip {
+    font-size: calc(11px * var(--card-font-scale, 1));
+    font-weight: 700;
+    padding: calc(4px * var(--card-font-scale, 1)) calc(10px * var(--card-font-scale, 1));
+    border-radius: 999px;
+    background: var(--btn-bg);
+    border: 1px solid var(--card-line);
+    color: var(--ink2);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s, color .15s, border-color .15s;
+}
+.hk-lvchip:hover { border-color: var(--cat, var(--accent)); }
+.hk-lvchip.on { background: var(--cat, var(--accent)); border-color: var(--cat, var(--accent)); color: #fff; }
+.hk-lvchip.lv-1.on { --cat: #2e9e5b; }
+.hk-lvchip.lv-2.on { --cat: #0e8f84; }
+.hk-lvchip.lv-3.on { --cat: #2f6ac0; }
+.hk-lvchip.lv-4.on { --cat: #6a5acd; }
+.hk-lvchip.lv-5.on { --cat: #7c44b4; }
+.hk-lvchip.lv-6.on { --cat: #b3436f; }
+.hk-lvchip.lv-79.on { --cat: #64748b; }
+
+.hk-search {
+    display: flex;
+    align-items: center;
+    gap: calc(6px * var(--card-font-scale, 1));
+    flex: 1;
+    min-width: calc(180px * var(--card-font-scale, 1));
+    padding: calc(5px * var(--card-font-scale, 1)) calc(11px * var(--card-font-scale, 1));
+    border-radius: 999px;
+    background: var(--btn-bg);
+    border: 1px solid var(--card-line);
+    color: var(--muted);
+}
+.hk-search:focus-within { border-color: var(--accent); }
+.hk-search i { font-size: calc(11px * var(--card-font-scale, 1)); }
+.hk-search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--card-ink);
+    font-size: calc(12px * var(--card-font-scale, 1));
+    font-family: inherit;
+}
+.hk-search input::placeholder { color: var(--muted); opacity: .7; }
+#hk-search-clear {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: calc(11px * var(--card-font-scale, 1));
+    padding: calc(2px * var(--card-font-scale, 1));
+}
+#hk-search-clear:hover { color: var(--unknown); }
+.hk-count {
+    font-size: calc(11px * var(--card-font-scale, 1));
+    font-weight: 700;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.hk-chart {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(calc(88px * var(--card-font-scale, 1)), 1fr));
+    gap: calc(7px * var(--card-font-scale, 1));
+    align-content: start;
+}
+.c-cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(1px * var(--card-font-scale, 1));
+    min-width: 0;
+    min-height: calc(58px * var(--card-font-scale, 1));
+    padding: calc(7px * var(--card-font-scale, 1)) calc(4px * var(--card-font-scale, 1));
+    border-radius: calc(11px * var(--card-font-scale, 1));
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: calc(3px * var(--card-font-scale, 1)) solid var(--cat);
+    color: var(--card-ink);
+    cursor: pointer;
+    user-select: none;
+    overflow: hidden;
+    transition: transform .12s ease, box-shadow .15s ease;
+}
+.c-cell:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(93, 78, 46, .12); }
+.c-cell:active { transform: scale(.97); }
+.c-word {
+    max-width: 100%;
+    font-size: calc(17px * var(--card-font-scale, 1));
+    line-height: 1.25;
+    font-weight: 700;
+    color: var(--strong);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.c-py {
+    max-width: 100%;
+    font-size: calc(10px * var(--card-font-scale, 1));
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.c-star {
+    position: absolute;
+    top: calc(3px * var(--card-font-scale, 1));
+    right: calc(4px * var(--card-font-scale, 1));
+    font-size: calc(9px * var(--card-font-scale, 1));
+    color: var(--gold);
+    pointer-events: none;
+}
+.c-fav {
+    position: absolute;
+    top: calc(3px * var(--card-font-scale, 1));
+    left: calc(4px * var(--card-font-scale, 1));
+    font-size: calc(9px * var(--card-font-scale, 1));
+    color: var(--rose);
+    pointer-events: none;
+}
+
+/* 翻页 */
+.hk-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(12px * var(--card-font-scale, 1));
+    margin-top: calc(14px * var(--card-font-scale, 1));
+}
+.hk-pager button {
+    width: calc(34px * var(--card-font-scale, 1));
+    height: calc(34px * var(--card-font-scale, 1));
+    border-radius: 50%;
+    border: 1px solid var(--card-line);
+    background: var(--btn-bg);
+    color: var(--ink2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(12px * var(--card-font-scale, 1));
+    transition: color .15s, border-color .15s;
+}
+.hk-pager button:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.hk-pager button:disabled { opacity: .35; cursor: default; }
+.hk-pg {
+    font-size: calc(11.5px * var(--card-font-scale, 1));
+    font-weight: 700;
+    color: var(--muted);
+    min-width: calc(120px * var(--card-font-scale, 1));
+    text-align: center;
+}
+
+/* 跳转高亮 */
+.hk-flash { animation: hkFlash 1.4s ease; }
+@keyframes hkFlash {
+    0%, 100% { box-shadow: 0 6px 18px rgba(93, 78, 46, .07); }
+    15%, 55% { box-shadow: 0 0 0 3px var(--cat), 0 10px 26px rgba(93, 78, 46, .18); }
+}
+
+/* ==========================================================================
+   5. 皮肤变体（写在卡片内选择器上 —— var() 在声明它的元素上就替换完）
+   ========================================================================== */
+html.skin-glass .hk-def { background: rgba(255, 255, 255, .06); }
+html.skin-glass .hk-search { background: rgba(255, 255, 255, .05); }
+
+html.skin-category .hk-root {
+    background: color-mix(in srgb, var(--cat) 7%, #fff);
+    border-color: color-mix(in srgb, var(--cat) 22%, #fff);
+    border-top-color: var(--cat);
+}
+html.skin-category .c-cell {
+    background: color-mix(in srgb, var(--cat) 6%, #fff);
+    border-color: color-mix(in srgb, var(--cat) 20%, #fff);
+    border-top-color: var(--cat);
+}
+@supports not (background: color-mix(in srgb, red 10%, white)) {
+    html.skin-category .hk-root { background: #f4f6f9; border-color: #dfe3e9; }
+    html.skin-category .c-cell { background: #f8fafc; border-color: #dfe3e9; }
+}
+
+/* ==========================================================================
+   6. 窄屏
+   ========================================================================== */
+@media (max-width: 720px) {
+    .hk-root { padding-right: calc(18px * var(--kt)); min-height: 0; }
+    .dc-acts { right: 8px; top: 8px; }
+    .dc-acts button { width: 34px; height: 34px; font-size: 17px; }
+    .hk-word { font-size: calc(36px * var(--kt)); }
+}

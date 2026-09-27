@@ -1,0 +1,21 @@
+{
+  "name": "HSK 分级词表 · Chinese HSK 3.0",
+  "description": "HSK 3.0 全量 11105 词（1–6 级 + 7–9 级），每词带拼音、繁体、词性与英文释义（CC-CEDICT）。配套小工具提供分级词表（等级筛选 + 去声调搜索 + 100/页网格，点格子读词并跳卡）与词卡视图（汉字点读、英文释义点读、Source 署名），50/页翻页，大卡组 DOM 恒定一页。标记/收藏、三套皮肤。面向海外中文学习者。",
+  "lang": "zh",
+  "fields": [
+    "word",
+    "pinyin",
+    "part_of_speech",
+    "traditional",
+    "definition",
+    "level",
+    "definition_source"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "word_play",
+    "word_mark",
+    "favorite_toggle"
+  ],
+  "cardsJson": "../dragoncard/default_cards/chinese_hsk/cards.json"
+}

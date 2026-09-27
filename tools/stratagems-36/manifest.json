@@ -1,0 +1,38 @@
+{
+  "name": "三十六计 · 36 Stratagems",
+  "description": "中英双语各 42 张（36 计 + 6 张套别总览），顶栏切换「中文 / English」。每张正面是计名 + 拼音 + 原文，翻面看释义 / 典故 / 现代应用（英版为 Meaning / Story / Reflection）；第 36 计翻面有通关彩蛋。标记 / 收藏、单卡模式、三套皮肤。",
+  "lang": "zh",
+  "fields": [
+    "type",
+    "order",
+    "set_order",
+    "setIndex",
+    "pinyin",
+    "setZh",
+    "setEn",
+    "nameZh",
+    "nameEn",
+    "sourceZh",
+    "sourceEn",
+    "explanationZh",
+    "explanationEn",
+    "storyZh",
+    "storyEn",
+    "modern",
+    "reflection",
+    "titleZh",
+    "titleEn",
+    "themeZh",
+    "themeEn",
+    "bodyZh",
+    "bodyEn"
+  ],
+  "trackedActions": [
+    "flip",
+    "audio_play",
+    "word_mark",
+    "favorite_toggle",
+    "easter_egg"
+  ],
+  "cardsJson": "../memory_market_goods/stratagems_36/cards_bilingual.json"
+}

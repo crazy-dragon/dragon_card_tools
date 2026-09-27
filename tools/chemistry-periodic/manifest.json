@@ -1,0 +1,33 @@
+{
+  "name": "元素周期表 · Periodic Table",
+  "description": "118 个化学元素的真·周期表（7 周期 × 18 族，镧系/锕系抽成下方两行，按类别上色）+ 118 张元素翻面卡（正面巨符号/中英文名/相对原子质量，背面常温状态/族周期/发现者/宇宙来源/趣味知识）+ 10 张「从大爆炸到元素生成」科普卡。顶栏切换「周期表 / 卡片」两种视图，点格子跳到该元素。中文朗读、标记/收藏、三套皮肤。",
+  "lang": "zh",
+  "fields": [
+    "type",
+    "atomic_number",
+    "symbol",
+    "name_zh",
+    "name_en",
+    "atomic_mass",
+    "category",
+    "category_color",
+    "group",
+    "period",
+    "phase",
+    "discovery",
+    "origin",
+    "fun_fact",
+    "science_order",
+    "era",
+    "title",
+    "body",
+    "related"
+  ],
+  "trackedActions": [
+    "flip",
+    "audio_play",
+    "word_mark",
+    "favorite_toggle"
+  ],
+  "cardsJson": "../dragoncard/default_cards/chemistry_periodic/cards.json"
+}

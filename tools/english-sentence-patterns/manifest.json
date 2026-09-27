@@ -1,0 +1,28 @@
+{
+  "name": "英语五种基本句型 · English Sentence Patterns",
+  "description": "29 张 = 1 张总览 + 15 张句型卡（每种句型 3 个例句）+ 8 张句子成分卡 + 3 张易混辨析卡 + 2 张 be 检验法。例句按句子成分着色，中文讲解 + 英文解释，中英双语。标记 / 收藏 / 朗读、单卡模式、三套皮肤。",
+  "lang": "zh",
+  "fields": [
+    "type",
+    "labelZh",
+    "labelEn",
+    "rows",
+    "pattern",
+    "pattern2",
+    "sentence",
+    "sentence2",
+    "breakdown",
+    "breakdown2",
+    "sentenceZh",
+    "note",
+    "noteEn",
+    "rule",
+    "checks"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "word_mark",
+    "favorite_toggle"
+  ],
+  "cardsJson": "../dragoncard/default_cards/english_sentence_patterns/cards.json"
+}

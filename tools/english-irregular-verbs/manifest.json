@@ -1,0 +1,28 @@
+{
+  "name": "英语不规则动词 · Irregular Verbs",
+  "description": "200 个常用不规则动词按「三形关系」分成五型（AAA 26 / AAB 1 / ABA 4 / ABB 85 / ABC 84），每型一张引导卡讲规律。总览卡 + 引导卡 + 动词卡自动成节；支持自测模式（藏起过去式/过去分词，点格子揭开）、按型筛选、例句朗读（过去式语境）、标记/收藏、三套皮肤。",
+  "lang": "en",
+  "fields": [
+    "type",
+    "nameZh",
+    "intro",
+    "group",
+    "anchor",
+    "pattern",
+    "rule",
+    "tip",
+    "example",
+    "exampleZh",
+    "base",
+    "zh",
+    "past",
+    "pp"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "word_play",
+    "word_mark",
+    "favorite_toggle"
+  ],
+  "cardsJson": "../dragoncard/default_cards/english_irregular_verbs/cards.json"
+}

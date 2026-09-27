@@ -1,0 +1,19 @@
+{
+  "name": "COCA20000 词卡",
+  "description": "复刻 coca20000 学习界面：目录分页、词卡列表/单卡、播放/偷看/标记/收藏、翡翠/简化样式切换",
+  "lang": "zh",
+  "fields": [
+    "word",
+    "phonetic_us",
+    "paraphrase_en",
+    "paraphrase_zh",
+    "examples"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "definition_view",
+    "word_mark",
+    "favorite_toggle",
+    "example_view"
+  ]
+}

@@ -1,0 +1,351 @@
+/* ==========================================================================
+   卡面：恐龙字母表（.da-*）—— 字母墙 / 卡片 两种视图共用一份数据
+   --------------------------------------------------------------------------
+   chart 字母墙   26 格海报式网格，每格 = 字母 + 恐龙 emoji + 中文名 + phonics，
+                  点格子 = 读「A for Ankylosaurus」+ 跳到那张卡。
+   card  卡片     大字母（色块）+ emoji + 英文名 / 中文名（点读）+ phonics +
+                  例词（点读）+ 造型描述 + 互动彩蛋。
+
+   ★ 每只恐龙的色值来自**卡片数据**的 color 字段（内联 style="--cat: #xxx"）。
+     CSS 里只给兜底色 —— 数据没写颜色时退回强调色。
+
+   ⚠️ 字号两条线（和别的小工具同一套规矩）：
+     · 卡片用 --kt（= --k × --card-font-scale）：字母是主角，需要那个放大倍数
+     · 字母墙只用 --card-font-scale（工具字号滑杆）：26 格一行排 8 个，
+       再乘 --k 会撑爆 —— 这条是部首表踩过的坑
+   ========================================================================== */
+
+/* 兜底主色：数据没写 color 字段时不至于透明 */
+.da-root, .c-cell { --cat: var(--accent); }
+
+/* 字母与恐龙名都是 display 字，圆润一点更像识字海报 */
+.da-big, .c-letter, .da-en, .da-letter-chip {
+    font-family: 'Baloo 2', 'Nunito', 'Avenir Next Rounded', 'Inter',
+                 -apple-system, "PingFang SC", sans-serif;
+}
+
+/* ==========================================================================
+   1. 卡根
+   ========================================================================== */
+.da-root {
+    position: relative;
+    box-sizing: border-box;
+    border-radius: 18px;
+    /* 右 158px = 右轨留白，固定不缩放 */
+    padding: calc(16px * var(--kt)) 158px calc(15px * var(--kt)) calc(20px * var(--kt));
+    margin-bottom: 16px;
+    color: var(--card-ink);
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: 5px solid var(--cat);
+    box-shadow: 0 6px 18px rgba(93, 78, 46, .07);
+    min-height: calc(200px * var(--kt));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 动作轨道（与别的工具逐字相同：右上角，所有卡同一个 x） */
+.dc-acts {
+    position: absolute;
+    right: 14px;
+    top: 11px;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 13px;
+    background: var(--acts-bg);
+    border: 1px solid var(--acts-line);
+    z-index: 2;
+}
+.dc-acts button {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.dc-acts button:hover { background: var(--act-hover); color: var(--accent); }
+.dc-acts button:active { transform: scale(.94); }
+.dc-acts button.act-mark.is-active { color: var(--gold); }
+.dc-acts button.act-fav.is-active { color: var(--rose); }
+
+/* ==========================================================================
+   2. 卡片内容
+   ========================================================================== */
+.da-top {
+    display: flex;
+    align-items: center;
+    gap: calc(8px * var(--kt));
+    margin-bottom: calc(10px * var(--kt));
+    flex-wrap: wrap;
+}
+.da-letter-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: calc(30px * var(--kt));
+    height: calc(30px * var(--kt));
+    padding: 0 calc(8px * var(--kt));
+    border-radius: calc(10px * var(--kt));
+    background: var(--cat);
+    color: #fff;
+    font-size: calc(17px * var(--kt));
+    font-weight: 800;
+    letter-spacing: .04em;
+}
+.da-ph {
+    display: inline-flex;
+    align-items: center;
+    font-size: calc(13px * var(--kt));
+    font-weight: 700;
+    padding: calc(4px * var(--kt)) calc(11px * var(--kt));
+    border-radius: 999px;
+    background: var(--tag-soft);
+    color: var(--tag-soft-fg);
+    border: 1px solid var(--tag-soft-line);
+    letter-spacing: .02em;
+}
+
+.da-mid {
+    display: flex;
+    align-items: center;
+    gap: calc(16px * var(--kt));
+    margin-bottom: calc(6px * var(--kt));
+}
+/* 大字母：淡底色块，颜色跟着这只恐龙走 */
+.da-big {
+    flex: none;
+    width: calc(96px * var(--kt));
+    height: calc(96px * var(--kt));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: calc(20px * var(--kt));
+    background: color-mix(in srgb, var(--cat) 14%, transparent);
+    border: 2px solid color-mix(in srgb, var(--cat) 45%, transparent);
+    color: var(--cat);
+    font-size: calc(58px * var(--kt));
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform .12s ease;
+}
+.da-big:hover { transform: scale(1.04); }
+.da-big:active { transform: scale(.96); }
+
+/* ⚠️ 恐龙英文名是个超长单词（Pachycephalosaurus / Archaeopteryx），
+   默认 min-content 撑着不肯收窄，150% 字号下会把整张卡顶出横向溢出
+   —— 两个层级都要放开换行（min-width:0 只治Chrome 的 flex 基线，治不了词宽） */
+.da-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: calc(9px * var(--kt)); }
+.da-dino { display: flex; align-items: center; gap: calc(10px * var(--kt)); min-width: 0; }
+.da-emoji {
+    flex: none;
+    font-size: calc(38px * var(--kt));
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+    transform-origin: 50% 90%;
+}
+.da-names { display: flex; flex-direction: column; gap: calc(2px * var(--kt)); min-width: 0; overflow-wrap: anywhere; }
+.da-en {
+    font-size: calc(19px * var(--kt));
+    font-weight: 800;
+    color: var(--strong);
+    letter-spacing: .01em;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+.da-zh {
+    font-size: calc(13.5px * var(--kt));
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 1px dashed transparent;
+    align-self: flex-start;
+    transition: color .15s, border-color .15s;
+}
+.da-zh:hover { color: var(--cat); border-bottom-color: var(--cat); }
+
+.da-word {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(7px * var(--kt));
+    align-self: flex-start;
+    padding: calc(6px * var(--kt)) calc(13px * var(--kt));
+    border-radius: 999px;
+    background: var(--btn-bg);
+    border: 1px solid var(--card-line);
+    color: var(--card-ink);
+    font-size: calc(14px * var(--kt));
+    font-weight: 700;
+    letter-spacing: .02em;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+}
+.da-word i { font-size: calc(11px * var(--kt)); color: var(--muted); }
+.da-word:hover { border-color: var(--cat); color: var(--cat); }
+.da-word:hover i { color: var(--cat); }
+
+.da-visual {
+    margin-top: calc(4px * var(--kt));
+    font-size: calc(12.5px * var(--kt));
+    line-height: 1.65;
+    color: var(--muted);
+}
+.da-visual i { margin-right: calc(6px * var(--kt)); opacity: .8; }
+
+.da-fun {
+    margin-top: auto;
+    padding-top: calc(10px * var(--kt));
+    border-top: 1px dashed var(--card-line);
+    font-size: calc(13px * var(--kt));
+    line-height: 1.65;
+    color: var(--body-ink);
+}
+.da-fun-tag {
+    display: inline-block;
+    margin-right: calc(7px * var(--kt));
+    padding: calc(2px * var(--kt)) calc(8px * var(--kt));
+    border-radius: 999px;
+    background: var(--tag-soft);
+    color: var(--tag-soft-fg);
+    border: 1px solid var(--tag-soft-line);
+    font-size: calc(10.5px * var(--kt));
+    font-weight: 800;
+    letter-spacing: .5px;
+}
+
+/* ==========================================================================
+   3. 字母墙
+   ⚠️ 只用 --card-font-scale，不吃 --k
+   ========================================================================== */
+.da-chart {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(calc(104px * var(--card-font-scale, 1)), 1fr));
+    gap: calc(8px * var(--card-font-scale, 1));
+    align-content: start;
+}
+.c-cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(1px * var(--card-font-scale, 1));
+    padding: calc(10px * var(--card-font-scale, 1)) calc(4px * var(--card-font-scale, 1)) calc(8px * var(--card-font-scale, 1));
+    border-radius: calc(14px * var(--card-font-scale, 1));
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: calc(4px * var(--card-font-scale, 1)) solid var(--cat);
+    color: var(--card-ink);
+    cursor: pointer;
+    user-select: none;
+    overflow: hidden;
+    min-height: calc(112px * var(--card-font-scale, 1));
+    justify-content: center;
+    transition: transform .12s ease, box-shadow .15s ease;
+}
+.c-cell:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(93, 78, 46, .12); }
+.c-cell:active { transform: scale(.97); }
+.c-letter {
+    font-size: calc(30px * var(--card-font-scale, 1));
+    line-height: 1.1;
+    font-weight: 800;
+    color: var(--cat);
+}
+.c-emoji {
+    font-size: calc(26px * var(--card-font-scale, 1));
+    line-height: 1.2;
+}
+.c-zh {
+    max-width: 100%;
+    font-size: calc(11px * var(--card-font-scale, 1));
+    font-weight: 700;
+    color: var(--card-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.c-ph {
+    font-size: calc(10px * var(--card-font-scale, 1));
+    color: var(--muted);
+    font-weight: 600;
+}
+.c-star {
+    position: absolute;
+    top: calc(5px * var(--card-font-scale, 1));
+    right: calc(6px * var(--card-font-scale, 1));
+    font-size: calc(10px * var(--card-font-scale, 1));
+    color: var(--gold);
+    pointer-events: none;
+}
+.c-fav {
+    position: absolute;
+    top: calc(5px * var(--card-font-scale, 1));
+    left: calc(6px * var(--card-font-scale, 1));
+    font-size: calc(10px * var(--card-font-scale, 1));
+    color: var(--rose);
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   4. 动效
+   ========================================================================== */
+.da-flash { animation: daFlash 1.4s ease; }
+@keyframes daFlash {
+    0%, 100% { box-shadow: 0 6px 18px rgba(93, 78, 46, .07); }
+    15%, 55% { box-shadow: 0 0 0 3px var(--cat), 0 10px 26px rgba(93, 78, 46, .18); }
+}
+.da-bounce { animation: daBounce .7s cubic-bezier(.28, .84, .42, 1); }
+@keyframes daBounce {
+    0%   { transform: scale(1) rotate(0); }
+    25%  { transform: scale(1.18, .84) rotate(-8deg); }
+    50%  { transform: scale(.88, 1.16) rotate(8deg); }
+    75%  { transform: scale(1.08, .94) rotate(-3deg); }
+    100% { transform: scale(1) rotate(0); }
+}
+
+/* ==========================================================================
+   5. 皮肤变体（放进卡片内选择器 —— var() 在声明它的元素上就替换完）
+   ========================================================================== */
+html.skin-glass .da-big {
+    background: color-mix(in srgb, var(--cat) 22%, transparent);
+    border-color: color-mix(in srgb, var(--cat) 50%, transparent);
+}
+html.skin-glass .da-word { background: rgba(255, 255, 255, .05); }
+
+html.skin-category .da-root {
+    background: color-mix(in srgb, var(--cat) 7%, #fff);
+    border-color: color-mix(in srgb, var(--cat) 22%, #fff);
+    border-top-color: var(--cat);
+}
+html.skin-category .c-cell {
+    background: color-mix(in srgb, var(--cat) 6%, #fff);
+    border-color: color-mix(in srgb, var(--cat) 20%, #fff);
+    border-top-color: var(--cat);
+}
+@supports not (background: color-mix(in srgb, red 10%, white)) {
+    html.skin-category .da-root { background: #f4f6f9; border-color: #dfe3e9; }
+    html.skin-category .c-cell { background: #f8fafc; border-color: #dfe3e9; }
+    .da-big { background: transparent; }
+}
+
+/* ==========================================================================
+   6. 窄屏
+   ========================================================================== */
+@media (max-width: 720px) {
+    .da-root { padding-right: calc(18px * var(--kt)); min-height: 0; }
+    .dc-acts { right: 8px; top: 8px; }
+    .dc-acts button { width: 34px; height: 34px; font-size: 17px; }
+    .da-mid { flex-wrap: wrap; }
+    .da-info { flex: 1 1 100%; }
+}

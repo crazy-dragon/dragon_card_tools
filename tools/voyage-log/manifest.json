@@ -1,0 +1,14 @@
+{
+  "name": "星际航行日志 · Voyage Log",
+  "description": "一天一张卡：月历看历史，点某一天弹卡面记今天。目标写在卡片数据里，换目标不影响历史。",
+  "lang": "zh",
+  "cardsJson": "../dragoncard/default_cards/checkin_log/cards.json",
+  "fields": [
+    "date",
+    "tasks"
+  ],
+  "trackedActions": [
+    "movie_20min",
+    "read_10pages"
+  ]
+}

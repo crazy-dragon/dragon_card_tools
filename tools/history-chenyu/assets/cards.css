@@ -1,0 +1,316 @@
+/* ==========================================================================
+   卡面：中国古代谶语录（.hc-*）
+   --------------------------------------------------------------------------
+   chart 朝代时间轴   .hc-band（一代一段：朝代名 + 英文 + 条数）→ .hc-grid
+                      段内网格，每格 = 谶语原文 + 出处，点格子跳卡。
+   card  卡片        .hc-dyn 朝代胶囊 / .hc-text 谶语原文（大字，衬线）/
+                      .hc-src 出处 / .hc-gloss 白话疏解（左竖线 + 「疏」标签）。
+   凡例卡 .hc-preface 另给一套：卷首取材说明，不是谶语。
+
+   ⚠️ 字号两条线（和别的小工具同一套规矩）：
+     · 卡片用 --kt（= --k × --card-font-scale）
+     · 时间轴格子**只吃 --card-font-scale**（不乘 --k）—— 一行要排下多个格子，
+       再乘 --k 会撑爆（部首表踩过的坑）
+
+   朝代色是工具层装饰：.hc-0..hc-7 按段序循环，第 9 段开始重头来过。
+   缺色时 --cat 兜底强调色，绝不至于透明。
+   ========================================================================== */
+
+/* ===== 1. 朝代色（8 色循环；墨夜皮肤用亮色版） ===== */
+.hc-root, .hc-band, .c-cell { --cat: var(--accent); }   /* 兜底 */
+
+.hc-0 { --cat: #7a4a2b; }   /* 褐 */
+.hc-1 { --cat: #2f6ac0; }   /* 靛 */
+.hc-2 { --cat: #b03a48; }   /* 朱 */
+.hc-3 { --cat: #0e8f84; }   /* 青 */
+.hc-4 { --cat: #7c44b4; }   /* 紫 */
+.hc-5 { --cat: #5a8a1f; }   /* 绿 */
+.hc-6 { --cat: #c2572d; }   /* 橙 */
+.hc-7 { --cat: #64748b; }   /* 灰 */
+
+html.skin-glass .hc-0 { --cat: #c49468; }
+html.skin-glass .hc-1 { --cat: #7fa9e8; }
+html.skin-glass .hc-2 { --cat: #e0838f; }
+html.skin-glass .hc-3 { --cat: #5fc9bd; }
+html.skin-glass .hc-4 { --cat: #c19bf0; }
+html.skin-glass .hc-5 { --cat: #a3c86e; }
+html.skin-glass .hc-6 { --cat: #e08a5f; }
+html.skin-glass .hc-7 { --cat: #9c94b0; }
+
+/* 谶语是文言短句，衬线更像古籍 */
+.hc-text, .c-text, .hc-pre-text {
+    font-family: "Songti SC", "STSong", "SimSun", "PingFang SC", serif;
+}
+
+/* ==========================================================================
+   2. 卡片视图
+   ========================================================================== */
+.hc-root {
+    position: relative;
+    box-sizing: border-box;
+    border-radius: 18px;
+    /* 右 158px = 右轨留白，固定不缩放 */
+    padding: calc(15px * var(--kt)) 158px calc(14px * var(--kt)) calc(20px * var(--kt));
+    margin-bottom: 16px;
+    color: var(--card-ink);
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: 4px solid var(--cat);
+    box-shadow: 0 6px 18px rgba(93, 78, 46, .07);
+    display: flex;
+    flex-direction: column;
+    gap: calc(8px * var(--kt));
+    overflow: hidden;
+}
+html.skin-glass .hc-root { backdrop-filter: blur(14px) saturate(140%); }
+
+/* 动作轨道（与其它小工具逐字相同：右上角，所有卡同一个 x） */
+.dc-acts {
+    position: absolute;
+    right: 14px;
+    top: 11px;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 13px;
+    background: var(--acts-bg);
+    border: 1px solid var(--acts-line);
+    z-index: 2;
+}
+.dc-acts button {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.dc-acts button:hover { background: var(--act-hover); color: var(--accent); }
+.dc-acts button:active { transform: scale(.94); }
+.dc-acts button.act-mark.is-active { color: var(--gold); }
+.dc-acts button.act-fav.is-active { color: var(--rose); }
+
+/* 朝代胶囊 */
+.hc-top { display: flex; align-items: center; gap: calc(6px * var(--kt)); min-width: 0; }
+.hc-dyn {
+    /* column flex 的 stretch 陷阱：卡根是 column ⇒ 直接放会被拉满宽 */
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: baseline;
+    gap: calc(6px * var(--kt));
+    padding: calc(2px * var(--kt)) calc(11px * var(--kt));
+    border: 1px solid var(--cat);
+    border-radius: 999px;
+    background: var(--tag-soft);
+    color: var(--cat);
+    font-size: calc(13px * var(--kt));
+    font-weight: 700;
+    letter-spacing: .04em;
+    line-height: 1.7;
+}
+.hc-dyn i {
+    font-style: normal;
+    font-size: calc(11px * var(--kt));
+    font-weight: 500;
+    opacity: .75;
+}
+
+/* 谶语原文：主角 */
+.hc-text {
+    font-size: calc(23px * var(--kt));
+    font-weight: 700;
+    color: var(--strong);
+    line-height: 1.6;
+    letter-spacing: .02em;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+.hc-text:hover { color: var(--cat); }
+
+/* 出处 */
+.hc-src {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(6px * var(--kt));
+    font-size: calc(12.5px * var(--kt));
+    color: var(--muted);
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+.hc-src i { font-size: calc(11px * var(--kt)); opacity: .8; }
+
+/* 白话疏解 */
+.hc-gloss {
+    position: relative;
+    padding-left: calc(14px * var(--kt));
+    border-left: 3px solid var(--cat);
+    font-size: calc(14.5px * var(--kt));
+    color: var(--body-ink);
+    line-height: 1.9;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+}
+.hc-gloss-tag {
+    display: inline-block;
+    margin-right: calc(6px * var(--kt));
+    padding: 0 calc(5px * var(--kt));
+    border-radius: 5px;
+    background: var(--chip-bg);
+    color: var(--cat);
+    font-size: calc(11px * var(--kt));
+    font-weight: 700;
+    line-height: 1.7;
+    vertical-align: calc(1px * var(--kt));
+}
+
+/* ===== 凡例卡（卷首说明，不是谶语） ===== */
+.hc-root.hc-preface {
+    border-top-color: var(--line-2);
+    background: var(--tag-bg);
+}
+.hc-pre-head {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: calc(7px * var(--kt));
+    padding: calc(3px * var(--kt)) calc(12px * var(--kt));
+    border-radius: 999px;
+    background: var(--chip-bg);
+    color: var(--muted);
+    font-size: calc(12px * var(--kt));
+    font-weight: 700;
+    letter-spacing: .04em;
+}
+.hc-pre-head i { font-size: calc(12px * var(--kt)); }
+.hc-pre-text {
+    font-size: calc(19px * var(--kt));
+    font-weight: 700;
+    color: var(--strong);
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+.hc-root.hc-preface .hc-gloss {
+    font-size: calc(14px * var(--kt));
+    border-left-color: var(--line-2);
+}
+
+/* ==========================================================================
+   3. 朝代时间轴
+   ========================================================================== */
+.hc-band { margin-bottom: calc(22px * var(--card-font-scale)); }
+
+.hc-band-head {
+    display: flex;
+    align-items: baseline;
+    gap: calc(9px * var(--card-font-scale));
+    margin-bottom: calc(9px * var(--card-font-scale));
+    padding-bottom: calc(5px * var(--card-font-scale));
+    border-bottom: 1px solid var(--line);
+}
+.hc-band-zh {
+    font-family: "Songti SC", "STSong", "SimSun", serif;
+    font-size: calc(20px * var(--card-font-scale));
+    font-weight: 800;
+    color: var(--cat);
+    letter-spacing: .06em;
+    line-height: 1.4;
+}
+.hc-band-en {
+    font-size: calc(12px * var(--card-font-scale));
+    color: var(--muted);
+    letter-spacing: .03em;
+}
+.hc-band-n {
+    margin-left: auto;
+    padding: calc(1px * var(--card-font-scale)) calc(9px * var(--card-font-scale));
+    border-radius: 999px;
+    background: var(--tag-soft);
+    color: var(--cat);
+    font-size: calc(11.5px * var(--card-font-scale));
+    font-weight: 700;
+    line-height: 1.7;
+}
+
+.hc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: calc(10px * var(--card-font-scale));
+}
+
+.c-cell {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: calc(4px * var(--card-font-scale));
+    min-height: calc(84px * var(--card-font-scale));
+    padding: calc(10px * var(--card-font-scale)) calc(26px * var(--card-font-scale))
+             calc(10px * var(--card-font-scale)) calc(13px * var(--card-font-scale));
+    border: 1px solid var(--card-line);
+    border-left: 4px solid var(--cat);
+    border-radius: 12px;
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: transform .12s, box-shadow .12s, border-color .12s;
+}
+.c-cell:hover {
+    transform: translateY(-2px);
+    border-color: var(--cat);
+    box-shadow: 0 6px 16px rgba(93, 78, 46, .12);
+}
+.c-cell:active { transform: translateY(0); }
+
+.c-text {
+    font-size: calc(14.5px * var(--card-font-scale));
+    font-weight: 700;
+    color: var(--strong);
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+.c-src {
+    font-size: calc(11.5px * var(--card-font-scale));
+    color: var(--muted);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+/* 标记 / 收藏角标 */
+.c-star, .c-fav {
+    position: absolute;
+    top: calc(5px * var(--card-font-scale));
+    font-size: calc(11px * var(--card-font-scale));
+    line-height: 1;
+}
+.c-star { right: calc(20px * var(--card-font-scale)); color: var(--gold); }
+.c-fav { right: calc(6px * var(--card-font-scale)); color: var(--rose); }
+
+/* 跳卡高亮 */
+.hc-flash { animation: hc-flash 1.4s ease-out; }
+@keyframes hc-flash {
+    0%   { box-shadow: 0 0 0 0 rgba(176, 58, 72, .45); }
+    35%  { box-shadow: 0 0 0 7px rgba(176, 58, 72, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(176, 58, 72, 0); }
+}
+
+/* ==========================================================================
+   4. 窄屏
+   ========================================================================== */
+@media (max-width: 760px) {
+    .hc-root { padding-right: calc(20px * var(--kt)); }
+    .hc-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+}
+
+/* ==========================================================================
+   5. 皮肤（只换颜色，不动版式）
+   ========================================================================== */
+html.skin-category .hc-root { border-top-width: 5px; }
+html.skin-category .hc-text { color: var(--cat); }
+html.skin-category .hc-dyn { background: var(--chip-bg); }

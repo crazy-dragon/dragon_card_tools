@@ -1,0 +1,18 @@
+{
+  "name": "成语积累 · Chinese Idioms",
+  "description": "10 条常用成语，每条带拼音、释义与例句。顶栏切换「成语墙 / 卡片」两种视图，点格子读成语并跳卡；成语与例句可点读；标记/收藏、三套皮肤。",
+  "lang": "zh",
+  "fields": [
+    "idiom",
+    "pinyin",
+    "meaning",
+    "example"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "word_play",
+    "word_mark",
+    "favorite_toggle"
+  ],
+  "cardsJson": "../dragoncard/default_cards/chinese_idiom/cards.json"
+}

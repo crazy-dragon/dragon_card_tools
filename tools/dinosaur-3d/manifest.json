@@ -1,0 +1,18 @@
+{
+  "name": "3D 恐龙 · Dinosaurs 3D",
+  "description": "GLB 恐龙模型观赏卡（现 2 张：霸王龙 / 翼龙），每卡一个可拖拽旋转、滚轮缩放、双击复位的 3D 舞台，闲置自动旋转；全局单 renderer（最可见卡位认领 canvas，其余显示占位）。中文名与描述朗读（zh）、拉丁学名点读（en）、标记/收藏、三套皮肤。",
+  "lang": "zh",
+  "fields": [
+    "name",
+    "model",
+    "latin",
+    "desc"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "word_play",
+    "word_mark",
+    "favorite_toggle"
+  ],
+  "cardsJson": "../dragoncard/default_cards/dinosaur_3d/cards.json"
+}

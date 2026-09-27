@@ -1,0 +1,240 @@
+/* ==========================================================================
+   卡面：3D 恐龙（.dj-*）—— 每张卡一个 three.js 舞台
+   --------------------------------------------------------------------------
+   结构：
+     .dj-root
+       .dc-acts          右上动作轨（播放 / 标记 / 收藏）
+       .dj-head          中文名 + 拉丁学名（点读 en）
+       .dj-stage         3D 舞台（全局唯一 renderer 认领；未认领时显示占位）
+       .dj-desc          中文描述
+
+   ⚠️ 舞台高度必须跟着 --kt 一起放大（字号乘倍率 ⇒ 盒子同倍率）：
+      canvas 是 renderer.setSize(stage.clientWidth, clientHeight)，
+      盒子不变而字号变大时 Hint 文字会溢出。
+
+   ⚠️ 占位由 CSS 画，不用 JS：未认领的舞台 .dj-stage:not(.on) 显示虚线框 +
+      「3D」字样。JS 只负责把唯一的 canvas 搬进 .on 的那个舞台。
+   ========================================================================== */
+
+.dj-root {
+    position: relative;
+    box-sizing: border-box;
+    border-radius: 18px;
+    padding: calc(18px * var(--kt)) 158px calc(16px * var(--kt)) calc(20px * var(--kt));
+    margin-bottom: 16px;
+    color: var(--card-ink);
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: 5px solid var(--accent);
+    box-shadow: 0 6px 18px rgba(93, 78, 46, .07);
+    display: flex;
+    flex-direction: column;
+    gap: calc(12px * var(--kt));
+    overflow: hidden;
+}
+
+/* 动作轨道（与别的小工具逐字相同：右上角，所有卡同一个 x） */
+.dc-acts {
+    position: absolute;
+    right: 14px;
+    top: 11px;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 13px;
+    background: var(--acts-bg);
+    border: 1px solid var(--acts-line);
+    z-index: 3;
+}
+.dc-acts button {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.dc-acts button:hover { background: var(--act-hover); color: var(--accent); }
+.dc-acts button:active { transform: scale(.94); }
+.dc-acts button.act-mark.is-active { color: var(--gold); }
+.dc-acts button.act-fav.is-active { color: var(--rose); }
+
+/* ==========================================================================
+   1. 头部：中文名 + 拉丁学名
+   ========================================================================== */
+.dj-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: calc(6px * var(--kt));
+    min-width: 0;
+}
+.dj-name {
+    font-size: calc(26px * var(--kt));
+    font-weight: 800;
+    color: var(--strong);
+    letter-spacing: .02em;
+    line-height: 1.2;
+    min-width: 0;
+}
+.dj-latin {
+    /* 卡片里的按钮：preflight 后 button 不带边框，写 border: 0 solid 才稳 */
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: calc(6px * var(--kt));
+    max-width: 100%;
+    padding: calc(3px * var(--kt)) calc(10px * var(--kt));
+    border: 1px solid var(--tag-soft-line);
+    border-radius: 999px;
+    background: var(--tag-soft);
+    color: var(--tag-soft-fg);
+    font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+    font-style: italic;
+    font-size: calc(14px * var(--kt));
+    line-height: 1.5;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.dj-latin i { font-size: calc(11px * var(--kt)); opacity: .8; }
+.dj-latin:hover { background: var(--chip-bg); color: var(--accent); }
+.dj-latin:active { transform: scale(.97); }
+
+/* ==========================================================================
+   2. 3D 舞台
+   ========================================================================== */
+.dj-stage {
+    position: relative;
+    box-sizing: border-box;
+    height: calc(300px * var(--kt));
+    border-radius: 14px;
+    background:
+        radial-gradient(120% 90% at 50% 12%, var(--tag-bg) 0%, var(--card-bg) 62%);
+    border: 1px solid var(--card-line);
+    overflow: hidden;
+    touch-action: none;                 /* 拖拽旋转不要带着页面一起滚 */
+    cursor: grab;
+}
+.dj-stage:active { cursor: grabbing; }
+
+/* 未认领时的占位：虚线框 + 立方体图标（CSS 画，JS 不管） */
+.dj-stage:not(.on)::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: calc(72px * var(--kt));
+    height: calc(72px * var(--kt));
+    margin: calc(-36px * var(--kt)) 0 0 calc(-36px * var(--kt));
+    border: 2px dashed var(--line-2);
+    border-radius: 16px;
+    opacity: .9;
+}
+.dj-stage:not(.on)::after {
+    content: '\f6c8';                    /* fa-cube（Font Awesome 6 实心） */
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: calc(28px * var(--kt));
+    color: var(--muted);
+    opacity: .55;
+}
+/* 加载中：占位图标换成旋转的 spinner */
+.dj-stage.loading::after {
+    content: '\f110';                    /* fa-spinner */
+    animation: dj-spin 1.1s linear infinite;
+}
+@keyframes dj-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+.dj-stage.on { border-color: var(--accent); }
+.dj-stage canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* 操作提示（右下角，半透明胶囊） */
+.dj-stage-hint {
+    position: absolute;
+    right: calc(10px * var(--kt));
+    bottom: calc(10px * var(--kt));
+    display: inline-flex;
+    align-items: center;
+    gap: calc(6px * var(--kt));
+    padding: calc(4px * var(--kt)) calc(10px * var(--kt));
+    border-radius: 999px;
+    background: var(--panel-solid);
+    color: var(--muted);
+    font-size: calc(11px * var(--kt));
+    line-height: 1.5;
+    pointer-events: none;
+    opacity: .9;
+    z-index: 2;
+}
+
+/* 加载失败 / 无模型 */
+.dj-err {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 calc(20px * var(--kt));
+    background: var(--card-bg);
+    color: var(--muted);
+    font-size: calc(14px * var(--kt));
+    line-height: 1.6;
+    text-align: center;
+}
+
+/* ==========================================================================
+   3. 描述
+   ========================================================================== */
+.dj-desc {
+    font-size: calc(15px * var(--kt));
+    line-height: 1.85;
+    color: var(--body-ink);
+    overflow-wrap: anywhere;
+}
+
+/* ==========================================================================
+   4. 窄屏
+   ========================================================================== */
+@media (max-width: 560px) {
+    .dj-root { padding-right: calc(20px * var(--kt)); }
+    .dj-stage { height: calc(240px * var(--kt)); }
+}
+
+/* ==========================================================================
+   5. 皮肤（只换颜色，不动版式）
+   ========================================================================== */
+html.skin-glass .dj-root {
+    background: var(--card-bg);
+    border-color: var(--card-line);
+    box-shadow: 0 8px 26px rgba(0, 0, 0, .28);
+}
+html.skin-glass .dj-stage {
+    background: radial-gradient(120% 90% at 50% 12%, rgba(255, 255, 255, .07) 0%, rgba(0, 0, 0, .28) 62%);
+}
+
+html.skin-category .dj-root {
+    border-top-color: var(--primary);
+}
+html.skin-category .dj-name { color: var(--primary-dark); }
+html.skin-category .dj-latin { background: var(--primary-soft); color: var(--primary-dark); }
+html.skin-category .dj-stage {
+    background: radial-gradient(120% 90% at 50% 12%, var(--primary-soft) 0%, var(--card-bg) 62%);
+}
+html.skin-category .dj-stage.on { border-color: var(--primary); }

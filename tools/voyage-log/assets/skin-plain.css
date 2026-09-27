@@ -1,0 +1,71 @@
+/* ==========================================================================
+   皮肤：素白 —— 与工具外壳同一套浅色（白天/打印友好）
+   --------------------------------------------------------------------------
+   只改颜色，版式一条不动。挂 `body[data-skin="plain"]`。
+   卡面（.ci-*）不在这里 —— 换皮肤时卡面长相一个字都不变。
+   ========================================================================== */
+body[data-skin="plain"] {
+    /* ---- 外壳（= app.css :root 的原值，显式写一遍免得依赖加载顺序） ---- */
+    --study-bg: #f4ede4;
+    --study-bg-end: #ece4da;
+    --study-sidebar: #ffffff;
+    --study-card-bg: #ffffff;
+    --study-content-bg: #e9f0ec;
+    --surface: #ffffff;
+    --card-bg: #ffffff;
+    --dropdown-bg: #ffffff;
+    --btn-bg: #ffffff;
+    --modal-bg: #ffffff;
+
+    --ink: #1d1d1d;
+    --ink-2: #475569;
+    --ink-3: #64748b;
+    --hp-text: #24292f;
+    --line: #e6e6e6;
+    --line-2: #e5e7eb;
+    --hp-border: #d0d7de;
+    --slate-soft: #f1f5f9;
+
+    --primary: #0f766e;
+    --primary-light: #14b8a6;
+    --primary-dark: #115e59;
+    --primary-soft: #ccfbf1;
+    --primary-ring: rgba(15, 118, 110, .30);
+    --primary-shadow: rgba(15, 118, 110, .25);
+    --action-btn-bg: #f1f5f9;
+
+    --tab-study-bg: #fef3c7;
+    --tab-study-border: #f59e0b;
+    --tab-study-fg: #92400e;
+    --tab-review-bg: #d8f3ee;
+    --tab-review-border: #14b8a6;
+    --tab-review-fg: #115e59;
+
+    --study-shadow: 0 4px 20px rgba(0, 0, 0, .06);
+    --study-shadow-hover: 0 8px 30px rgba(0, 0, 0, .10);
+
+    /* ---- 月历 ---- */
+    --vg-panel: #ffffff;
+    --vg-line: #e5e7eb;
+    --vg-ink: #1f2937;
+    --vg-ink-2: #475569;
+    --vg-ink-3: #94a3b8;
+    --vg-ink-4: #cbd5e1;
+    --vg-cell: #f4f6f9;
+    --vg-cell-hover: #e9eef5;
+    --vg-cell-on: rgba(217, 119, 6, .10);
+    --vg-cell-on-hover: rgba(217, 119, 6, .16);
+    --vg-cell-future: #fafbfc;
+    --vg-cell-today: rgba(217, 119, 6, .10);
+    --vg-accent: #b45309;
+    --vg-accent-line: rgba(217, 119, 6, .55);
+    --vg-accent-ring: rgba(217, 119, 6, .22);
+    --vg-today-glow: 0 0 14px rgba(217, 119, 6, .12);
+    --vg-pip: #dfe5ec;
+    --vg-pip-on: #d97706;
+    --vg-pip-glow: none;
+    --vg-tip-bg: #ffffff;
+
+    background-image: linear-gradient(135deg, var(--study-bg), var(--study-bg-end));
+}
+body[data-skin="plain"] .vg-day.today { border-width: 1px; }

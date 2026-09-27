@@ -1,0 +1,206 @@
+/* ==========================================================================
+   exam-vocab · 皮肤 1 / Standard（通用词汇卡）
+   --------------------------------------------------------------------------
+   版式沿用本体考试词卡的类名（card-header / word-basic / word-index /
+   word-title / word-phonetic / word-chips / definition / example-item），
+   所以这一套就是用户已经在用的那张「考试词卡」长相。
+
+   与本体模板的两点区别：
+     · 考试徽章与整套配色**不再写死**：由卡组名派生后写成内联变量
+       （--acc / --acc2 / --acc-soft / --acc-deep / --acc-ink / --acc-line /
+        --acc-sh），一套 CSS 覆盖初中/高中/四级/六级/考研全部卡组。
+     · 释义区在「未标记且没偷看」时整块收起（本体靠 :has 把背景与色条去掉，
+       这里连内边距一起收掉，免得在列表里留下一排空带）。
+
+   字号缩放铁律（项目记忆）：凡字号乘 var(--fs) 的元素，盒子尺寸必须同倍率。
+   按钮/图标走 --bs = clamp(1, --card-font-scale, 1.8)（2026-09-21 用户拍板：
+   与文字同比例、下限 1 即缩小时按钮不缩、上限 1.8 对齐字号上限）。
+   ========================================================================== */
+
+.skin-standard {
+  --fs: var(--card-font-scale, 1);
+  --bs: clamp(1, var(--card-font-scale, 1), 1.8);
+  --btn: calc(44px * var(--bs));
+
+  --fs-word: calc(22px * var(--fs));
+  --fs-phon: calc(13px * var(--fs));
+  --fs-chip: calc(11px * var(--fs));
+  --fs-idx:  calc(12px * var(--fs));
+  --fs-def:  calc(13px * var(--fs));
+  --fs-ex:   calc(12px * var(--fs));
+
+  /* 按钮语义色（偷看=青、标记=玫红、收藏=琥珀，与本体一致） */
+  --eye: #0891b2;  --eye-bg: #ecfeff;  --eye-line: #a5f3fc;  --eye-sh: rgba(8,145,178,.30);
+  --mark: #e11d48; --mark-bg: #fff1f2; --mark-line: #fecdd3; --mark-sh: rgba(225,29,72,.30);
+  --fav: #d97706;  --fav-bg: #fffbeb;  --fav-line: #fde68a;  --fav-sh: rgba(217,119,6,.30);
+  --warm-ink: #9a3412;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 260px;
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, .07);
+  border-left: 4px solid transparent;      /* 左脊：4px 透明边框 + 背景渐变条，盒几何不变 */
+  background:
+    linear-gradient(180deg, var(--acc) 0%, var(--acc2) 100%) left top / 4px 100% no-repeat,
+    radial-gradient(125% 100% at 100% 0%, var(--acc-soft) 0%, rgba(255, 255, 255, 0) 60%),
+    linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .045), 0 10px 22px -15px rgba(15, 23, 42, .26);
+  transition: transform .25s, box-shadow .25s, border-color .25s;
+}
+.skin-standard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, .05), 0 18px 32px -18px rgba(15, 23, 42, .32);
+}
+.skin-standard:active { transform: scale(.99); }
+/* 标记为「不熟」= 整张卡换玫瑰色调（与本体皮肤一致） */
+.skin-standard.highlighted {
+  background:
+    linear-gradient(180deg, #e11d48 0%, #f43f5e 100%) left top / 4px 100% no-repeat,
+    radial-gradient(125% 100% at 100% 0%, rgba(244, 63, 94, .10) 0%, rgba(255, 255, 255, 0) 60%),
+    linear-gradient(180deg, #fff8f9 0%, #fffdfd 100%);
+}
+
+/* ---------- 1. 头部：序号 / 单词 / 音标 / 徽章 + 动作按钮 ---------- */
+.skin-standard .card-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 10px; margin-bottom: 8px;
+}
+.skin-standard .word-basic { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.skin-standard .word-index {
+  display: inline-grid; place-items: center; flex: 0 0 auto;
+  min-width: calc(22px * var(--fs));
+  height: calc(20px * var(--fs));
+  padding: 0 calc(6px * var(--fs));
+  border-radius: calc(7px * var(--fs));
+  font-size: var(--fs-idx); font-weight: 800;
+  letter-spacing: calc(.3px * var(--fs));
+  color: #fff;
+  background: linear-gradient(135deg, var(--acc) 0%, var(--acc2) 100%);
+  box-shadow: 0 3px 8px -2px var(--acc-sh);
+}
+.skin-standard .word-title {
+  font-size: var(--fs-word);
+  font-weight: var(--card-font-weight, 700);
+  color: var(--acc-ink);
+  letter-spacing: -.3px;
+}
+.skin-standard .word-phonetic {
+  font-size: var(--fs-phon); font-weight: 600;
+  color: var(--acc-deep);
+  background: var(--acc-soft);
+  border-radius: 9999px;
+  padding: calc(1px * var(--fs)) calc(9px * var(--fs));
+}
+.skin-standard .word-chips { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.skin-standard .exam-badge {
+  font-size: var(--fs-chip); font-weight: 800; letter-spacing: .5px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--acc) 0%, var(--acc2) 100%);
+  padding: calc(2px * var(--fs)) calc(7px * var(--fs));
+  border-radius: calc(6px * var(--fs));
+  box-shadow: 0 2px 6px -2px var(--acc-sh);
+}
+.skin-standard .rank-chip {
+  font-size: var(--fs-chip); font-weight: 700; letter-spacing: .2px;
+  color: var(--acc-deep);
+  background: var(--acc-soft);
+  border: 1px solid var(--acc-line);
+  padding: calc(2px * var(--fs)) calc(7px * var(--fs));
+  border-radius: calc(6px * var(--fs));
+  font-variant-numeric: tabular-nums;
+}
+.skin-standard .form-note {
+  font-size: var(--fs-chip); font-weight: 600; font-style: italic;
+  color: var(--acc-deep); opacity: .8;
+}
+
+/* ---------- 2. 动作按钮 ---------- */
+.skin-standard .actions { display: flex; gap: 10px; flex: 0 0 auto; }
+.skin-standard .action-btn {
+  cursor: pointer; flex: 0 0 auto;
+  width: var(--btn); height: var(--btn);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 90px;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 1.5px 3px rgba(15, 23, 42, .07), inset 0 1px 0 rgba(255, 255, 255, .9);
+  transition: transform .16s cubic-bezier(.2, .7, .3, 1), box-shadow .16s,
+              background .16s, color .16s, border-color .16s;
+}
+.skin-standard .action-btn i { display: block; line-height: 1; font-size: calc(18px * var(--bs)); }
+.skin-standard .action-btn:hover { transform: translateY(-2px); }
+.skin-standard .action-btn:active { transform: scale(.88); }
+
+.skin-standard .act-play { color: var(--acc); background: var(--acc-soft); border-color: var(--acc-line); }
+.skin-standard .act-eye  { color: var(--eye);  background: var(--eye-bg);  border-color: var(--eye-line); }
+.skin-standard .act-mark { color: var(--mark); background: var(--mark-bg); border-color: var(--mark-line); }
+.skin-standard .act-fav  { color: var(--fav);  background: var(--fav-bg);  border-color: var(--fav-line); }
+
+.skin-standard .act-play:hover { background: var(--acc); color: #fff; border-color: var(--acc); box-shadow: 0 7px 15px -4px var(--acc-sh); }
+.skin-standard .act-eye:hover  { background: var(--eye);  color: #fff; border-color: var(--eye);  box-shadow: 0 7px 15px -4px var(--eye-sh); }
+.skin-standard .act-mark:hover { background: var(--mark); color: #fff; border-color: var(--mark); box-shadow: 0 7px 15px -4px var(--mark-sh); }
+.skin-standard .act-fav:hover  { background: var(--fav);  color: #fff; border-color: var(--fav);  box-shadow: 0 7px 15px -4px var(--fav-sh); }
+
+.skin-standard .act-eye.is-active,
+.skin-standard .act-mark.is-active,
+.skin-standard .act-fav.is-active { color: #fff; }
+.skin-standard .act-eye.is-active  { background: var(--eye);  border-color: var(--eye);  box-shadow: 0 5px 13px -3px var(--eye-sh); }
+.skin-standard .act-mark.is-active { background: var(--mark); border-color: var(--mark); box-shadow: 0 5px 13px -3px var(--mark-sh); }
+.skin-standard .act-fav.is-active  { background: var(--fav);  border-color: var(--fav);  box-shadow: 0 5px 13px -3px var(--fav-sh); }
+
+/* ---------- 3. 释义块（单块，中英同宽同起点） ---------- */
+.skin-standard .definition {
+  margin-bottom: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--acc-soft);
+  box-shadow: inset 3px 0 0 var(--acc);
+}
+/* 中英都藏起来时整块收起（否则列表里每张卡都拖着一条空带）。
+   不用收缩成 0 高 —— 标记/取消标记时卡片高度不跳。 */
+.skin-standard .definition:not(:has(> div:not(.hide))) {
+  background: none; box-shadow: none; padding: 0;
+}
+.skin-standard .def-en,
+.skin-standard .def-cn { font-size: var(--fs-def); line-height: 1.4; }
+.skin-standard .def-en { color: #1d1d1d; }
+.skin-standard .def-cn { color: var(--warm-ink); margin-top: 3px; }
+.skin-standard .sense + .sense { margin-top: 2px; }
+
+/* ---------- 4. 分隔线 + 例句 ---------- */
+.skin-standard .divider {
+  height: 1px; margin: 6px 0;
+  background: linear-gradient(90deg, var(--acc-line) 0%, rgba(15, 23, 42, 0) 100%);
+}
+.skin-standard .examples { display: flex; flex-direction: column; gap: 6px; }
+.skin-standard .example-item {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 6px 8px; border-radius: 8px;
+  background: #fefaf0;
+  box-shadow: inset 3px 0 0 #f0b429;
+}
+.skin-standard .ex-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.skin-standard .ex-en { flex: 1; min-width: 0; word-wrap: break-word; word-break: break-word; font-size: var(--fs-ex); line-height: 1.4; color: #1d1d1d; }
+/* 例句里的目标词（env.hl 包出来的）—— 通用皮肤用本卡组强调色，不加下划线，克制一点 */
+.skin-standard .ex-en .hl { color: var(--acc-deep); font-weight: 700; }
+.skin-standard .ex-cn { font-size: var(--fs-ex); line-height: 1.4; color: var(--warm-ink); }
+.skin-standard .action-btn.example-toggle-btn {
+  width: calc(30px * var(--bs)); height: calc(30px * var(--bs));
+  color: var(--fav); background: var(--fav-bg); border-color: var(--fav-line);
+}
+.skin-standard .action-btn.example-toggle-btn i { font-size: calc(13px * var(--bs)); }
+.skin-standard .action-btn.example-toggle-btn:hover { background: var(--fav); color: #fff; border-color: var(--fav); }
+.skin-standard .action-btn.example-toggle-btn.active { background: linear-gradient(135deg, var(--fav), #b45309); color: #fff; border-color: var(--fav); }
+
+/* ---------- 5. 显示 / 隐藏 ---------- */
+.skin-standard .hide { display: none; }
+
+/* ---------- 6. 窄屏：4 个按钮 + 长单词塞不进一行 ---------- */
+@media (max-width: 640px) {
+  .skin-standard .card-header { flex-wrap: wrap; row-gap: 10px; }
+  .skin-standard .actions { flex: 1 0 100%; justify-content: space-between; }
+}

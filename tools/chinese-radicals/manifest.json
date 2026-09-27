@@ -1,0 +1,31 @@
+{
+  "name": "汉字部首 · Chinese Radicals 214",
+  "description": "康煕部首 214 个，按笔画分 5 档（1-2 / 3-4 / 5-6 / 7-9 / 10+）配色。顶栏切换「部首表 / 卡片」两种视图：部首表按笔画分档排成真表格，点格子读部首名并跳到该卡；卡片显示字形/变形/名称/中英义类/3 个例字（带 HSK 等级）/中英口诀，可看笔顺。中文朗读、标记/收藏、三套皮肤。",
+  "lang": "zh",
+  "fields": [
+    "type",
+    "nameZh",
+    "nameEn",
+    "no",
+    "char",
+    "disp",
+    "py",
+    "en",
+    "st",
+    "var",
+    "core",
+    "sem",
+    "semEn",
+    "ex",
+    "tip",
+    "tipEn"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "stroke_play",
+    "word_play",
+    "word_mark",
+    "favorite_toggle"
+  ],
+  "cardsJson": "../dragoncard/default_cards/chinese_radicals/cards.json"
+}

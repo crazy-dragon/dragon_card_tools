@@ -1,0 +1,247 @@
+/* ==========================================================================
+   卡面：成语积累（.ci-*）
+   --------------------------------------------------------------------------
+   chart 成语墙   .ci-grid 大网格，每格 = 成语大字 + 拼音 + 释义，点格子跳卡。
+   card  卡片     成语大字（衬线，可点读）/ 拼音按钮 / 释义（左「释义」签）/
+                  例句（左「例」签，可点读）。
+
+   ⚠️ 字号两条线（和别的小工具同一套规矩）：
+     · 卡片用 --kt（= --k × --card-font-scale）
+     · 成语墙格子**只吃 --card-font-scale**（不乘 --k）—— 一行要排下多个格子，
+       再乘 --k 会撑爆（部首表踩过的坑）
+   ========================================================================== */
+
+/* 谶语式的四字成语，衬线更像字帖 */
+.ci-idiom, .c-idiom {
+    font-family: "Songti SC", "STSong", "SimSun", "PingFang SC", serif;
+}
+
+/* ==========================================================================
+   1. 卡片视图
+   ========================================================================== */
+.ci-root {
+    position: relative;
+    box-sizing: border-box;
+    border-radius: 18px;
+    /* 右 158px = 右轨留白，固定不缩放 */
+    padding: calc(16px * var(--kt)) 158px calc(15px * var(--kt)) calc(20px * var(--kt));
+    margin-bottom: 16px;
+    color: var(--card-ink);
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-top: 4px solid var(--accent);
+    box-shadow: 0 6px 18px rgba(93, 78, 46, .07);
+    display: flex;
+    flex-direction: column;
+    gap: calc(10px * var(--kt));
+    overflow: hidden;
+}
+html.skin-glass .ci-root { backdrop-filter: blur(14px) saturate(140%); }
+
+/* 动作轨道（与其它小工具逐字相同：右上角，所有卡同一个 x） */
+.dc-acts {
+    position: absolute;
+    right: 14px;
+    top: 11px;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 13px;
+    background: var(--acts-bg);
+    border: 1px solid var(--acts-line);
+    z-index: 2;
+}
+.dc-acts button {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.dc-acts button:hover { background: var(--act-hover); color: var(--accent); }
+.dc-acts button:active { transform: scale(.94); }
+.dc-acts button.act-mark.is-active { color: var(--gold); }
+.dc-acts button.act-fav.is-active { color: var(--rose); }
+
+/* 头部：成语大字 + 拼音 */
+.ci-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: calc(4px * var(--kt));
+    min-width: 0;
+}
+.ci-idiom {
+    font-size: calc(34px * var(--kt));
+    font-weight: 800;
+    color: var(--strong);
+    letter-spacing: .08em;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+.ci-idiom:hover { color: var(--accent); }
+.ci-py {
+    align-self: flex-start;
+    padding: calc(2px * var(--kt)) calc(10px * var(--kt));
+    border: 1px solid var(--tag-soft-line);
+    border-radius: 999px;
+    background: var(--tag-soft);
+    color: var(--tag-soft-fg);
+    font-size: calc(13px * var(--kt));
+    line-height: 1.7;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.ci-py:hover { background: var(--chip-bg); color: var(--accent); }
+.ci-py:active { transform: scale(.97); }
+
+/* 释义 / 例句：左标签 + 正文 */
+.ci-meaning, .ci-ex {
+    position: relative;
+    padding-left: calc(14px * var(--kt));
+    border-left: 3px solid var(--accent);
+    font-size: calc(15px * var(--kt));
+    line-height: 1.9;
+    color: var(--body-ink);
+    overflow-wrap: anywhere;
+}
+.ci-ex { cursor: pointer; }
+.ci-ex:hover { color: var(--accent); }
+.ci-tag {
+    display: inline-block;
+    margin-right: calc(6px * var(--kt));
+    padding: 0 calc(5px * var(--kt));
+    border-radius: 5px;
+    background: var(--chip-bg);
+    color: var(--accent);
+    font-size: calc(11px * var(--kt));
+    font-weight: 700;
+    line-height: 1.7;
+    vertical-align: calc(1px * var(--kt));
+}
+
+/* ==========================================================================
+   2. 成语墙
+   ========================================================================== */
+.ci-wall-head {
+    display: flex;
+    align-items: baseline;
+    gap: calc(9px * var(--card-font-scale));
+    margin-bottom: calc(12px * var(--card-font-scale));
+    padding-bottom: calc(6px * var(--card-font-scale));
+    border-bottom: 1px solid var(--line);
+}
+.ci-wall-title {
+    font-family: "Songti SC", "STSong", "SimSun", serif;
+    font-size: calc(20px * var(--card-font-scale));
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: .06em;
+    line-height: 1.4;
+}
+.ci-wall-n {
+    margin-left: auto;
+    padding: calc(1px * var(--card-font-scale)) calc(9px * var(--card-font-scale));
+    border-radius: 999px;
+    background: var(--tag-soft);
+    color: var(--accent);
+    font-size: calc(11.5px * var(--card-font-scale));
+    font-weight: 700;
+    line-height: 1.7;
+}
+
+.ci-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: calc(10px * var(--card-font-scale));
+}
+
+.c-cell {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: calc(3px * var(--card-font-scale));
+    min-height: calc(96px * var(--card-font-scale));
+    padding: calc(11px * var(--card-font-scale)) calc(26px * var(--card-font-scale))
+             calc(11px * var(--card-font-scale)) calc(13px * var(--card-font-scale));
+    border: 1px solid var(--card-line);
+    border-left: 4px solid var(--accent);
+    border-radius: 12px;
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: transform .12s, box-shadow .12s, border-color .12s;
+}
+.c-cell:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 6px 16px rgba(93, 78, 46, .12);
+}
+.c-cell:active { transform: translateY(0); }
+
+.c-idiom {
+    font-size: calc(19px * var(--card-font-scale));
+    font-weight: 800;
+    color: var(--strong);
+    letter-spacing: .06em;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+.c-py {
+    font-size: calc(11.5px * var(--card-font-scale));
+    color: var(--accent);
+    line-height: 1.5;
+}
+.c-mn {
+    font-size: calc(12px * var(--card-font-scale));
+    color: var(--muted);
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* 标记 / 收藏角标 */
+.c-star, .c-fav {
+    position: absolute;
+    top: calc(5px * var(--card-font-scale));
+    font-size: calc(11px * var(--card-font-scale));
+    line-height: 1;
+}
+.c-star { right: calc(20px * var(--card-font-scale)); color: var(--gold); }
+.c-fav { right: calc(6px * var(--card-font-scale)); color: var(--rose); }
+
+/* 跳卡高亮 */
+.ci-flash { animation: ci-flash 1.4s ease-out; }
+@keyframes ci-flash {
+    0%   { box-shadow: 0 0 0 0 rgba(47, 106, 192, .45); }
+    35%  { box-shadow: 0 0 0 7px rgba(47, 106, 192, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(47, 106, 192, 0); }
+}
+
+/* ==========================================================================
+   3. 窄屏
+   ========================================================================== */
+@media (max-width: 760px) {
+    .ci-root { padding-right: calc(20px * var(--kt)); }
+    .ci-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+
+/* ==========================================================================
+   4. 皮肤（只换颜色，不动版式）
+   ========================================================================== */
+html.skin-category .ci-root { border-top-width: 5px; }
+html.skin-category .ci-idiom { color: var(--primary-dark); }
+html.skin-category .ci-tag { color: var(--primary-dark); }
+html.skin-category .ci-meaning, html.skin-category .ci-ex { border-left-color: var(--primary); }

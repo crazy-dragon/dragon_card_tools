@@ -1,0 +1,630 @@
+/* ==========================================================================
+   西方典故 · 小工具（37 张双语阅读卡，按 4 个分组分节）
+   --------------------------------------------------------------------------
+   与 DragonCard 本体（static/styles.css 的「STUDY LAYOUT」段）对齐的部分：
+     · :root token 名与值直接抄本体（含 --study-* 那一组）
+     · topbar gap:10px · .top-btn 38×38 透明无边框 · 图标 22px · 标题是胶囊
+     · toast / tooltip / 下拉 / 字体抽屉，都是本体那套
+     · .sc-card-wrap 高度恒定 —— 单卡模式切卡不跳高
+   本工具**没有**的：全局侧栏、目录分页、侧栏页签、结课弹窗、分段控件、眼睛按钮。
+   原版模板是照抄本体的「目录 → 页签 → 每一页 100 张」，一轮下来要点三次才看到卡；
+   现在是把 37 张一次读完，卡片之间按 group 插一条分组小标题。
+
+   版面：列宽 620px（.study-content 660 − 左右各 20 padding），但**不套 P4 的 ×1.45**
+   —— 那是给"符号当主角"的音标卡定的；这是一张段落为主的阅读卡，正文 ×1.10
+   （--k，见 cards.css），由工具自带的字号滑杆再乘一层（--kt）。
+
+   版面 = P4 档（用户拍板）：
+     · 列宽 620px（.study-content 660 − 左右各 20 padding）
+     · 卡内文字 ×1.45（--k，见 cards.css），工具字号缩放叠在它上面（--kt）
+
+   三套皮肤在文件末尾（.skin-cream 奶油 / .skin-glass 墨玻璃 / .skin-category 分类彩），
+   全部只换颜色不动版式。
+   ========================================================================== */
+
+/* ===== 1. Token ===== */
+:root {
+    --primary: #0f766e;
+    --primary-light: #14b8a6;
+    --primary-dark: #115e59;
+    --primary-soft: #ccfbf1;
+    --unknown: #f43f5e;
+    --slate: #64748b;
+    --slate-soft: #f1f5f9;
+    --ink: #1d1d1d;
+    --ink-2: #475569;
+    --ink-3: #64748b;
+    --hp-text: #24292f;
+    --line: #e6e6e6;
+    --line-2: #e5e7eb;
+    --card-bg: #ffffff;
+    --btn-bg: #ffffff;
+    --dropdown-bg: #ffffff;
+
+    /* 卡面字号：--k 是本卡组的基准倍数（阅读卡取 1.10，正文约 16.5px），
+       --card-font-scale 是工具自带的缩放（JS 写在 documentElement 上）。
+       两者都在 :root 上，合成出来的 --kt 也就在 :root 上定死，卡片只要
+       calc(31px * var(--kt)) 即可 —— 改一个数整卡跟着走。 */
+    --k: 1.10;
+    --card-font-scale: 1;
+    --kt: calc(var(--k) * var(--card-font-scale, 1));
+}
+
+/* ===== 1b. Tailwind Preflight 的等价重置（别删） =====
+   本体 <head> 引了 static/vendor/tailwind/tailwind.browser.min.js（**v4**），它的
+   preflight 给整个文档铺了一层基线。本工具**故意不引 Tailwind**（浏览器版会扫描
+   class 现场生成 CSS，会把卡面一起 normalize），于是把这层基线等价手写在这里。
+
+   缺了它实测会差（活体比对 audit_vs_host.js 抓到）：
+     · html line-height 24px ↔ normal → 一排胶囊集体矮 4px
+       （.study-deck-title 35→31 / .stats-text 32→28）
+     · 裸 button：padding 0 ↔ 1px 6px · font-size 16 ↔ 13.33 · font-family Inter ↔ Arial
+   ⚠️ v4 的默认边框色是 currentColor（不是 v3 的 #e5e7eb）。写成灰色会让**所有没显式
+     设边框色**的元素集体跑偏 —— 实测一次就多出 10 条差异。 */
+*, ::before, ::after, ::backdrop, ::file-selector-button {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid;   /* = border-width:0 + border-style:solid + border-color:currentColor */
+}
+html { line-height: 1.5; -webkit-text-size-adjust: 100%; tab-size: 4; }
+body { line-height: inherit; }
+hr { height: 0; color: inherit; border-top-width: 1px; }
+h1, h2, h3, h4, h5, h6 { font-size: inherit; font-weight: inherit; }
+a { color: inherit; text-decoration: inherit; }
+b, strong { font-weight: bolder; }
+small { font-size: 80%; }
+ol, ul, menu { list-style: none; }
+table { text-indent: 0; border-color: inherit; border-collapse: collapse; }
+button, input, optgroup, select, textarea, ::file-selector-button {
+    font: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    border-radius: 0;
+    background-color: transparent;
+    opacity: 1;
+}
+/* ⚠️ 这里**故意没有** `button, [role="button"] { cursor: pointer }`：
+   Tailwind **v4** 的 preflight 把这个 v3 时代的规则删掉了。工具里所有需要手型的
+   按钮都已经自己写了 cursor: pointer，所以删掉这一条不会被别的元素牵连。 */
+:disabled { cursor: default; }
+img, svg, video, canvas, audio, iframe, embed, object { display: block; vertical-align: middle; }
+img, video { max-width: 100%; height: auto; }
+[hidden]:where(:not([hidden="until-found"])) { display: none !important; }
+
+body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--card-ink);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--page-bg), var(--page-bg2));
+}
+
+/* ===== 2. 布局：单栏（没有侧栏了） =====
+   ⚠️ 外面这一层**不要**跟着卡片列一起收窄：实测 700px 时顶栏那排控件（分段控件 +
+   标题 + 眼睛 + 字体 + 音色 + 上下 + 单卡 + 皮肤 + 统计）会折成两行、顶栏高 101px。
+   卡片列由下面的 .study-content 单独收（660 − 40 = 620），两者互不影响。 */
+.layout-row {
+    display: flex;
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 1040px;
+}
+.main-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+/* ===== 3. 顶栏 ===== */
+.study-top-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 20px;
+    border-bottom: 1px solid var(--bar-line);
+    flex-shrink: 0;
+    background: var(--bar-bg);
+    backdrop-filter: blur(12px) saturate(140%);
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 50;
+}
+html.skin-glass .study-top-bar { backdrop-filter: blur(18px) saturate(150%); }
+
+/* 3.1 语言分段控件（中文 / English）
+   —— 从 western-allusions 复制骨架时这一段是被删掉的（那个工具没有分段控件），
+   但 --seg-bg / --seg-line / --seg-on-bg / --seg-on-fg 四个 token 三套皮肤里都还在，
+   所以这里把选择器补回来即可，换肤自动跟着走。 */
+.seg {
+    display: inline-flex;
+    align-items: center;
+    background: var(--seg-bg);
+    border: 1px solid var(--seg-line);
+    border-radius: 999px;
+    padding: 3px;
+    flex-shrink: 0;
+}
+.seg button {
+    padding: 7px 14px;
+    border: 0;
+    background: transparent;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+}
+.seg button:hover { color: var(--card-ink); }
+.seg button.on { background: var(--seg-on-bg); color: var(--seg-on-fg); }
+
+.study-deck-title {
+    display: inline-flex;
+    align-items: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--title-fg);
+    background: var(--title-bg);
+    padding: 6px 16px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.top-btn {
+    width: 38px;
+    height: 38px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.top-btn:hover { background: var(--act-hover); color: var(--card-ink); transform: translateY(-1px); }
+.top-btn:active { transform: scale(0.92); }
+.top-btn i { font-size: 22px; }
+.top-btn.active { background: var(--act-hover); color: var(--accent); }
+/* （本工具没有带文字的顶栏按钮 —— 眼睛按钮只有音标拼读那个工具有） */
+.stats-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border: 1px solid var(--seg-line);
+    border-radius: 999px;
+    background: var(--seg-bg);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.stats-text:hover { color: var(--accent); border-color: var(--accent); transform: translateY(-1px); }
+
+/* ===== 4. 滚动区与内容列 ===== */
+.study-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+}
+.study-scroll::-webkit-scrollbar { width: 10px; }
+.study-scroll::-webkit-scrollbar-track { background: transparent; }
+.study-scroll::-webkit-scrollbar-thumb {
+    background: var(--scroll-thumb, rgba(0, 0, 0, .16));
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+.study-scroll::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover, rgba(0, 0, 0, .28)); background-clip: content-box; }
+.study-content {
+    width: 100%;
+    max-width: 660px;          /* 660 − 左右各 20 padding = 卡片列 620（P4） */
+    margin: 0 auto;
+    flex: 1;
+    min-height: 0;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+}
+/* 单卡模式：一次只看一张，给它更宽的行（不然左右两条导航会把卡挤到 550px，
+   比列表模式还窄）；JS 在切模式时给 .study-content 挂 .wide。 */
+.study-content.wide { max-width: 900px; }
+/* flex: 1 0 auto —— 短卡组时撑满面板（单卡模式还要靠它垂直居中），但**绝不压缩**。
+   原写法 flex:1 / min-height:0 会把列表压成面板高（实测 837px），里面的
+   position:sticky 分组标题只能吸 837px 就被"顶走"（探针在 scrollTop=1400 抓到
+   head 跑到 -534）。overflow 是 visible，卡片照样显示，所以肉眼看不出来。 */
+#study-list { display: flex; flex-direction: column; flex: 1 0 auto; }
+#study-list > .enter { animation: dcEnter .32s ease both; }
+@keyframes dcEnter {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* ===== 5. 单卡模式（作用域 = 当前这一组）」 ===== */
+.single-card-stage {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    flex: 1;
+    min-height: 0;
+}
+.sc-main { flex: 1; min-width: 0; display: flex; justify-content: center; align-items: center; }
+.sc-nav-col { display: flex; flex-direction: column; align-items: center; gap: 14px; flex-shrink: 0; }
+/* 固定、不动的卡盒：**容器**高度恒定（切卡不跳高，本体同款规矩），但里面的卡片
+   不拉伸 —— 按自己的内容高垂直居中，短卡（比如引导卡）不会拖出一大片底色。 */
+.sc-card-wrap {
+    width: 100%;
+    max-width: 620px;          /* 与列表模式同宽，切模式不跳宽 */
+    margin: 0 auto;
+    height: min(760px, calc(100vh - 140px));
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 16px;
+    background: transparent;
+    overflow: hidden;
+}
+.sc-card-wrap > [data-card-id] { flex: 0 1 auto; min-height: 0; overflow-y: auto; margin-bottom: 0; }
+.sc-nav {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 1px solid var(--card-line);
+    background: var(--card-bg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink2);
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.sc-nav:hover { color: var(--accent); border-color: var(--accent); transform: translateY(-2px); }
+.sc-nav:active { transform: scale(0.92); }
+.sc-progress { text-align: center; font-size: 13px; color: var(--muted); font-weight: 600; min-width: 20px; }
+/* 单卡模式里显示当前所在的分组（阅读卡才有） */
+.sc-group { font-size: 12px; font-weight: 700; color: var(--muted); text-align: center; max-width: 96px; line-height: 1.35; }
+.sc-anim { animation: scFlash 0.28s ease; }
+@keyframes scFlash {
+    0% { opacity: 0; transform: translateY(10px) scale(0.97); }
+    60% { opacity: 1; }
+    100% { opacity: 1; transform: none; }
+}
+
+/* ===== 6. 皮肤下拉 ===== */
+.skin-toggle-wrap { position: relative; }
+.skin-dropdown {
+    position: absolute;
+    z-index: 200;
+    width: 180px;
+    background: var(--panel-solid);
+    border: 1px solid var(--seg-line);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+}
+.skin-dropdown-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--seg-line);
+    color: var(--ink2);
+}
+.skin-list { padding: 4px; }
+.skin-option {
+    padding: 9px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.15s;
+}
+.skin-option:hover { background: var(--act-hover); }
+.skin-option.active { background: var(--act-hover); color: var(--accent); font-weight: 700; }
+.skin-option i { width: 16px; text-align: center; }
+
+/* ===== 7. 音色下拉 ===== */
+.control-group { position: relative; }
+.voice-dropdown {
+    position: absolute;
+    z-index: 100;
+    width: 220px;
+    background: var(--panel-solid);
+    border: 1px solid var(--seg-line);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+    top: 100%;
+    left: 0;
+    margin-top: 6px;
+}
+.voice-dropdown-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--seg-line);
+    color: var(--ink2);
+}
+.voice-list { max-height: 220px; overflow-y: auto; }
+.voice-option { padding: 8px 12px; font-size: 12px; cursor: pointer; transition: background 0.15s; }
+.voice-option.muted { cursor: pointer; color: var(--muted); font-style: italic; }
+.voice-option:hover { background: var(--act-hover); }
+.voice-option.active { background: var(--act-hover); color: var(--accent); }
+
+/* ===== 8. 字体抽屉 ===== */
+.font-drawer {
+    position: fixed;
+    z-index: 200;
+    width: 180px;
+    background: var(--panel-solid);
+    border: 1px solid var(--seg-line);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+    padding: 10px 12px;
+}
+.font-drawer .setting-item { margin-bottom: 10px; }
+.font-drawer .setting-item label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.font-drawer .setting-item .control { display: flex; align-items: center; gap: 6px; }
+.font-drawer .setting-item button {
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+    border: 1px solid var(--seg-line);
+    background: var(--seg-bg);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+}
+.font-drawer .setting-item button:hover { color: var(--accent); border-color: var(--accent); }
+.font-drawer .setting-item .value { font-size: 12px; color: var(--card-ink); min-width: 32px; text-align: center; }
+.reset-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 6px;
+    border: none;
+    background: var(--act-hover);
+    color: var(--accent);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* ===== 9. Tooltip ===== */
+#global-tooltip {
+    position: fixed;
+    padding: 5px 12px;
+    background: rgba(15, 23, 42, 0.95);
+    color: #f1f5f9;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 7px;
+    white-space: nowrap;
+    z-index: 99999;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+#global-tooltip.show { opacity: 1; visibility: visible; }
+
+/* ===== 10. Toast ===== */
+.toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    background: #1d1d1d;
+    color: #fff;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+    pointer-events: none;
+    white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.error { background: var(--unknown); }
+
+.empty-state { text-align: center; color: var(--muted); padding: 60px 20px; font-size: 14px; }
+
+/* ==========================================================================
+   11. 三套皮肤
+   --------------------------------------------------------------------------
+   只换颜色，一行版式都不动。共用同一份 token：
+     --page-bg / --page-bg2   页面渐变两端
+     --bar-bg / --bar-line    顶栏底与分隔线
+     --panel-solid            下拉/抽屉的不透明底（浮层不能半透明，会透出卡面）
+     --seg-bg / --seg-line / --seg-on-bg / --seg-on-fg   分段控件
+     --title-bg / --title-fg  标题胶囊
+     --card-bg / --card-line / --card-ink / --strong / --ink2 / --muted
+     --accent                 强调色（按钮 hover、tip 左条、音标卡上的 sound）
+     --tag-*  --acts-*  --act-hover  --fml-*  --chip-*  --alt-*  --scroll-*
+     --tag-soft/--tag-soft-fg/--tag-soft-line  速记与小节底色（阅读卡、假名卡用）
+     --body-ink                                段落的正文色
+     --gold / --rose                           标记、收藏按钮的激活色
+   ========================================================================== */
+
+/* 11.1 奶油 Cream（默认）：暖白底 + 白卡 + 金标签 + 紫强调 */
+html, html.skin-cream {
+    --page-bg: #f8f7f2;
+    --page-bg2: #efece2;
+    --bar-bg: rgba(255, 255, 255, .78);
+    --bar-line: #e6e0d1;
+    --panel-solid: #fffdf8;
+    --seg-bg: #fffdf8;
+    --seg-line: #e8e2d2;
+    --seg-on-bg: #3a3342;
+    --seg-on-fg: #ffffff;
+    --title-bg: #efeaf7;
+    --title-fg: #5f3d94;
+    --card-bg: #fffdf8;
+    --card-line: #ece5d6;
+    --card-ink: #2f2a37;
+    --strong: #2b2142;
+    --ink2: #5c5668;
+    --muted: #97907f;
+    --accent: #7b42bc;
+    --tag-bg: #f7efd9;
+    --tag-fg: #8a6a1f;
+    --tag-line: #eadcb4;
+    --acts-bg: #f7f4ea;
+    --acts-line: #ebe4d2;
+    --act-hover: rgba(123, 66, 188, .09);
+    --fml-bg: #f4f0e6;
+    --fml-line: #e6dcc6;
+    --chip-bg: #fdfaf3;
+    --chip-line: #e6dcc6;
+    --chip-ink: #3a3444;
+    --chip-muted: #a09480;
+    --alt-bg: #f4f1f8;
+    --alt-fg: #6f6480;
+    --alt-line: #e2dce9;
+    --alt-warn-bg: #fdf1de;
+    --alt-warn-fg: #95631a;
+    --alt-warn-line: #efdcb6;
+    /* 阅读卡/假名卡新增：速记底色、正文色、标记与收藏的激活色（原模板的 --gold/--rose） */
+    --tag-soft: #fbf7ea;
+    --tag-soft-fg: #5a4f33;
+    --tag-soft-line: #eadfc4;
+    --body-ink: #403a2f;
+    --gold: #a67c00;
+    --rose: #b3436f;
+    --scroll-thumb: rgba(93, 78, 46, .18);
+    --scroll-thumb-hover: rgba(93, 78, 46, .32);
+}
+
+/* 11.2 墨玻璃 Ink Glass：深紫底 + 毛玻璃卡 + 金强调 */
+html.skin-glass {
+    --page-bg: #181223;
+    --page-bg2: #120c1c;
+    --bar-bg: rgba(255, 255, 255, .05);
+    --bar-line: rgba(255, 255, 255, .10);
+    --panel-solid: #241b33;
+    --seg-bg: rgba(255, 255, 255, .06);
+    --seg-line: rgba(255, 255, 255, .12);
+    --seg-on-bg: #ffd782;
+    --seg-on-fg: #1a1428;
+    --title-bg: rgba(255, 215, 130, .14);
+    --title-fg: #ffd782;
+    --card-bg: rgba(255, 255, 255, .07);
+    --card-line: rgba(255, 255, 255, .14);
+    --card-ink: #f3efff;
+    --strong: #ffffff;
+    --ink2: #cdc6de;
+    --muted: #9c94b0;
+    --accent: #ffd782;
+    --tag-bg: rgba(255, 215, 130, .14);
+    --tag-fg: #ffd782;
+    --tag-line: rgba(255, 215, 130, .30);
+    --acts-bg: rgba(255, 255, 255, .06);
+    --acts-line: rgba(255, 255, 255, .12);
+    --act-hover: rgba(255, 215, 130, .14);
+    --fml-bg: rgba(255, 255, 255, .06);
+    --fml-line: rgba(255, 255, 255, .12);
+    --chip-bg: rgba(255, 255, 255, .07);
+    --chip-line: rgba(255, 255, 255, .16);
+    --chip-ink: #f0ecfa;
+    --chip-muted: #a79fbb;
+    --alt-bg: rgba(255, 255, 255, .07);
+    --alt-fg: #d8d1e8;
+    --alt-line: rgba(255, 255, 255, .16);
+    --alt-warn-bg: rgba(255, 215, 130, .12);
+    --alt-warn-fg: #ffd782;
+    --alt-warn-line: rgba(255, 215, 130, .28);
+    --tag-soft: rgba(255, 215, 130, .10);
+    --tag-soft-fg: #ece4d0;
+    --tag-soft-line: rgba(255, 215, 130, .22);
+    --body-ink: #ddd3e8;
+    --gold: #ffd782;
+    --rose: #d96b98;
+    --scroll-thumb: rgba(255, 255, 255, .18);
+    --scroll-thumb-hover: rgba(255, 255, 255, .30);
+}
+html.skin-glass body { color: var(--card-ink); }
+html.skin-glass .toast { background: #ffd782; color: #1a1428; }
+html.skin-glass .toast.error { background: var(--unknown); color: #fff; }
+html.skin-glass .wa-root { box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
+
+/* 11.3 分类彩 Category：类别/章节各一色，卡底跟着淡染（颜色在 cards.css 里，
+   因为要读卡片自己的 --cat）。这里只给「不属于任何类别色」的部分定色。 */
+html.skin-category {
+    --page-bg: #f4ede4;
+    --page-bg2: #ece4da;
+    --bar-bg: #ffffff;
+    --bar-line: #e6e6e6;
+    --panel-solid: #ffffff;
+    --seg-bg: #ffffff;
+    --seg-line: #dfe3e9;
+    --seg-on-bg: #3a3342;
+    --seg-on-fg: #ffffff;
+    --title-bg: #e9f0ec;
+    --title-fg: #115e59;
+    --card-bg: #f4f6f9;
+    --card-line: #dfe3e9;
+    --card-ink: #22303f;
+    --strong: #18202b;
+    --ink2: #41506b;
+    --muted: #8a8f98;
+    --accent: #5b6472;
+    --tag-bg: #64748b;
+    --tag-fg: #ffffff;
+    --tag-line: transparent;
+    --acts-bg: #ffffff;
+    --acts-line: #e3e8ef;
+    --act-hover: rgba(255, 255, 255, .85);
+    --fml-bg: #eef1f6;
+    --fml-line: #d5dbe4;
+    --chip-bg: #ffffff;
+    --chip-line: #c6cdd9;
+    --chip-ink: #333a45;
+    --chip-muted: #8a8f98;
+    --alt-bg: #eef1f6;
+    --alt-fg: #5b6472;
+    --alt-line: #d5dbe4;
+    --alt-warn-bg: #fdf3e3;
+    --alt-warn-fg: #8a5a12;
+    --alt-warn-line: #f0dcb4;
+    --tag-soft: #f3f6fa;
+    --tag-soft-fg: #46536b;
+    --tag-soft-line: #e0e6ee;
+    --body-ink: #3b4757;
+    --gold: #8a6a1f;
+    --rose: #b3436f;
+    --scroll-thumb: rgba(34, 48, 63, .18);
+    --scroll-thumb-hover: rgba(34, 48, 63, .30);
+}
