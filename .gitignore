@@ -1,10 +1,20 @@
-# 小工具源码目录（本目录不是 git 仓库；这份规则是为将来 git init 准备的）
+# 小工具工程的忽略规则（本目录已是独立 git 仓，无 remote）
 
-# 打包产物
+# 打包产物（中间产物，build.py 可再生）
 dist/
 
 # 可再生产物（截图 / 一次性 html / 预览工程）
 _preview/
+
+# 临时工作稿（方案 / 审阅意见等，与本工程交付无关）
+_reports/
+
+# Python 字节码（build.py 打包时本就会排除 __pycache__，这里再挡一道以防误提交）
+__pycache__/
+*.pyc
+
+# 注意：free_decks/ **不**忽略 —— 那是免费卡组的最终交付包（要发给用户的成品），
+# 不是中间产物。其中 tool.zip / cards.json 由 build.py 同步，meta/readme/LICENSE 人工写。
 
 # ⛔ 第三方音素录音，不进仓库
 #    来源 soundsamerican.net/data-ipa-chart/phonemes.mp3（一个 51 秒 sprite 切出的 48 段）

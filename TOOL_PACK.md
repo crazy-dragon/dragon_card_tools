@@ -1,27 +1,35 @@
-# DragonCard 小工具（zip 模板）打包规范
+# DragonCard Mini-Tools (zip template) Packaging Spec
 
-小工具（Tool）是一种**全屏运行的独立 H5 应用**，以 `.zip` 包形式上传绑定到卡组。
-**卡组 = 数据源 + 一个工具**：本体提供数据（分页）、排序、进度、埋点，工具负责全部展示与交互。
-工具运行在**同源新标签页**（`/v1/tools/<id>/run?deck_id=&user_id=`），与主应用零 CSS/JS 污染。
+> Chinese counterpart: [TOOL_PACK.zh.md](TOOL_PACK.zh.md). This English version is primary.
 
-工具源码开发在独立工程 **`dragoncard_tools/`**（见文末），打包后上传绑定。
+A mini-tool (Tool) is a **standalone, full-screen H5 app** uploaded and bound to a
+deck as a `.zip` package. **Deck = data source + one tool**: the host provides the
+data (paging), sorting, progress and analytics, while the tool owns all rendering
+and interaction. The tool runs in a **same-origin new tab**
+(`/v1/tools/<id>/run?deck_id=&user_id=`) with zero CSS/JS bleed from the main app.
 
-## 目录结构
+Tool sources live in the separate project **`dragoncard_tools/`** (see the end),
+and are packaged before upload/binding.
+
+## Directory structure
 
 ```
 tool.zip
-├── index.html        # 必需 — 全屏应用入口，必须在 zip 根目录
-├── manifest.json     # 必需 — 元数据（名称/描述/期望字段/埋点）
-└── assets/           # 你自己的 js/css/图片/字体（相对路径引用）
+├── index.html        # required — full-screen entry point, must be at the zip root
+├── manifest.json     # required — metadata (name/description/expected fields/analytics)
+└── assets/           # your own js/css/images/fonts (referenced by relative path)
 ```
 
-打包时压缩**目录内容**本身，确保 `index.html` 在 zip 根目录（`build.py` 已处理）。
+Packaging zips the **contents** of the directory itself, so that `index.html` sits at
+the zip root (`build.py` already handles this).
 
-## 存储
+## Storage
 
-上传后，本体把 zip **解压到文件系统 `minitools/<tool_id>/`**（`index.html` + `manifest.json` + `assets/`），
-数据库 `t_tool` 只存元数据（`name/description/icon/lang/dir_path/manifest_json/tracked_actions`）。
-解压后可直接往 `minitools/<id>/` 添加资源文件（代理会服务它们）。
+After upload, the host **extracts the zip to the filesystem at `minitools/<tool_id>/`**
+(`index.html` + `manifest.json` + `assets/`), and the `t_tool` table stores only
+metadata (`name/description/icon/lang/dir_path/manifest_json/tracked_actions`).
+Once extracted you may add asset files directly under `minitools/<id>/` (the proxy
+serves them).
 
 ## manifest.json
 
@@ -36,34 +44,36 @@ tool.zip
 }
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 |---|---|
-| `name` | 工具名（必填） |
-| `description` | 描述（管理页作为"卡组简介"展示，最多 3 行） |
-| `lang` | 界面语言（zh/en） |
-| `icon` | 图标（zip 内相对路径，如 `assets/icon.png`）。**不写也可**：上传/重新上传工具时会自动检测 `assets/icon.png` / `.svg` / `.jpg` / `.webp`（任选其一）作为卡组图标，替换图标文件重传即更新；都没有则用默认龙 `fa-dragon` |
-| `fields` | **工具期望的数据字段**——用于字段匹配校验（卡组数据缺字段会提示） |
-| `trackedActions` | 你会用 `cardAPI.track()` 记录的动作名（**≤5 个**） |
+| `name` | Tool name (required) |
+| `description` | Description (shown as the "deck intro" on the management page, max 3 lines) |
+| `lang` | UI language (zh/en) |
+| `icon` | Icon (relative path inside the zip, e.g. `assets/icon.png`). **Optional**: on upload/re-upload the host auto-detects `assets/icon.png` / `.svg` / `.jpg` / `.webp` (any one) as the deck icon — replace the file and re-upload to update it; if none exists the default dragon `fa-dragon` is used |
+| `fields` | **Data fields the tool expects** — used for field-match validation (missing fields in the deck data raise a warning) |
+| `trackedActions` | Action names you will record via `cardAPI.track()` (**≤5**) |
 
-## 本体桥接：window.cardAPI
+## Host bridge: window.cardAPI
 
-`/v1/tools/<id>/run` 返回 `index.html` 时在 `<head>` 注入 `window.cardAPI`（先于工具脚本就绪）。从 URL 查询参数可获得当前卡组：
+When `/v1/tools/<id>/run` returns `index.html`, it injects `window.cardAPI` into
+`<head>` (ready before the tool scripts). The current deck is available from the URL
+query parameters:
 
 ```js
-window.cardAPI.deckId;   // 卡组 id
-window.cardAPI.userId;   // 用户 id
+window.cardAPI.deckId;   // deck id
+window.cardAPI.userId;   // user id
 ```
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `getPage(page, pageSize)` | 分页读取卡组数据（排序+进度），返回 `{cards, total, page, ...}`；`cards[i].data` 为原始字段，`cards[i].id` 为卡项 id |
-| `mark(itemId, isUnknown)` | 标记卡项不熟/掌握（回写学习进度） |
-| `favorite(itemId, fav)` | 收藏/取消收藏 |
-| `track(action, itemId)` | 埋点。**卡项操作必须带 `itemId`**（= `deck_item_id`），否则服务端丢弃 |
-| `playAudio(text)` | 播报英文（浏览器 TTS） |
-| `finish()` | 记录一次工具完成事件 |
+| `getPage(page, pageSize)` | Read deck data with paging (sorted + progress), returns `{cards, total, page, ...}`; `cards[i].data` holds the raw fields, `cards[i].id` is the deck-item id |
+| `mark(itemId, isUnknown)` | Mark a deck item as unknown/mastered (writes back learning progress) |
+| `favorite(itemId, fav)` | Favorite / unfavorite |
+| `track(action, itemId)` | Analytics. **Item actions must pass `itemId`** (= `deck_item_id`), otherwise the server drops it |
+| `playAudio(text)` | Speak English text (browser TTS) |
+| `finish()` | Record one tool-completion event |
 
-示例（注意埋点带卡项 id）：
+Example (note the item id on `track`):
 
 ```js
 cardAPI.getPage(1).then(function (d) {
@@ -72,62 +82,98 @@ cardAPI.getPage(1).then(function (d) {
 });
 document.querySelector('#mark').onclick = function () {
   cardAPI.mark(cards[idx].id, true);
-  cardAPI.track('word_mark', cards[idx].id);   // 埋点必须带 itemId
+  cardAPI.track('word_mark', cards[idx].id);   // track must pass itemId
 };
 ```
 
-## 数据接口（本体提供，功能与卡片模板一致）
+## Data API (provided by the host, same behavior as the card template)
 
-- 分页数据：`/v1/learn/page?user_id=&deck_id=&page=&page_size=`（经 `cardAPI.getPage`）
-- 标记/收藏/埋点均走本体引擎，**学习进度与观测统计完全复用**
+- Paged data: `/v1/learn/page?user_id=&deck_id=&page=&page_size=` (via `cardAPI.getPage`)
+- Mark/favorite/analytics all go through the host engine; **learning progress and
+  observability stats are fully reused**
 
-## 预置基础库（直接引用，无需打包）
+## Bundled base libraries (reference directly, no packaging needed)
 
-| 库 | 引用 |
+| Library | Reference |
 |---|---|
-| Three.js | `<script src="/static/vendor/three/three.module.js"></script>`（ESM 动态 `import('three')`、`import('three/addons/...')` 也可） |
+| Three.js | `<script src="/static/vendor/three/three.module.js"></script>` (ESM dynamic `import('three')` and `import('three/addons/...')` also work) |
 | Font Awesome | `<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">` |
 | Tailwind | `<script src="/static/vendor/tailwind/tailwind.browser.min.js"></script>` |
 | ECharts | `<script src="/static/vendor/echarts/echarts.min.js"></script>` |
 
-> 其它库请**自行打进 zip**（`assets/` 相对路径引用）。不要引用外部 CDN——工具离线运行，外部资源加载不到。
+> Bundle any other library **inside your zip** (referenced by a relative path under
+> `assets/`). Do not reference external CDNs — tools run offline and external
+> resources will not load.
 
-## 环境约束
+## Environment constraints
 
-- 脚本：可内联 `<script>`，也可外置 `<script src="./assets/app.js">`；`window` 命名空间协作
-- 不要 `import`/`export`（避免 module 加载问题）；可用 ES2017+
-- 资源全用相对路径（zip 内）或 `/static/vendor/...`（本体预置）
-- 工具与主应用同源但**完全独立文档**：看不到主应用 DOM，主应用样式不会进入工具
+- Scripts: may be inline `<script>` or external `<script src="./assets/app.js">`;
+  collaborate via the `window` namespace
+- Do not use `import`/`export` (avoids module-loading issues); ES2017+ is fine
+- All resources use relative paths (inside the zip) or `/static/vendor/...` (host-provided)
+- The tool and the main app are same-origin but **fully separate documents**: the
+  tool cannot see the main app's DOM, and main-app styles never leak into the tool
 
-## 安装与使用
+## Install & use
 
-工具在**管理页**绑定（没有独立安装页）：
-1. 卡组详情 → 管理弹窗 → 小工具卡片
-2. 未绑定 → 点「上传 zip 绑定」上传打包好的工具 zip（创建工具 + 绑定到该卡组）
-3. 已绑定 → 可**重新上传**（替换，保留工具 id 与绑定）、**下载**（导出 zip）、**解绑**
-4. 进入卡组 → 直接打开绑定工具（新标签页）
+Tools are bound on the **management page** (there is no standalone install page):
+1. Deck detail → management dialog → mini-tool card
+2. Not bound → click "Upload zip & bind" to upload the packaged tool zip (creates the tool + binds it to that deck)
+3. Already bound → **Re-upload** (replace, preserving the tool id and binding), **Download** (export the zip), **Unbind**
+4. Enter the deck → the bound tool opens directly (new tab)
 
-## 开发工程：dragoncard_tools
+## Development project: dragoncard_tools
 
-工具源码在独立工程 `/Users/alfred/CodeBase/Python/dragoncard_tools/`：
+Tool sources live in the separate project `/Users/alfred/CodeBase/Python/dragoncard_tools/`:
 
 ```
 dragoncard_tools/
-├── build.py                 # 打包脚本：遍历 tools/ 下各工具目录 → dist/<name>.zip
-├── tools/                   # 工具源码（每个工具一个目录）
-│   ├── coca-cards/          # 示例工具（单词词卡）
+├── build.py                 # packager: walk each tool dir under tools/ → dist/<name>.zip
+├── tools/                   # tool sources (one directory per tool)
+│   ├── coca-cards/          # example tool (word cards)
 │   │   ├── index.html
 │   │   ├── manifest.json
 │   │   └── assets/{app.css, app.js}
-│   ├── ipa-cards/ phonics-cards/ voyage-log/   # 其它工具
+│   ├── ipa-cards/ phonics-cards/ voyage-log/   # other tools
 │   └── ...
-└── dist/                    # 打包产物（上传安装用）
+├── dist/                    # build output (for upload/install)
+└── free_decks/              # free-deck delivery bundles (see below)
+    └── laozi/{cards.json, tool.zip, meta.json, readme.txt, LICENSE}
 ```
 
 ```bash
 cd dragoncard_tools
-python3 build.py            # 打包全部 → dist/
-python3 build.py coca-cards # 只打包指定工具
+python3 build.py            # build everything → dist/
+python3 build.py coca-cards # build only the named tool
+python3 build.py --lang zh  # console language: en (default) | zh
 ```
 
-开发规范见 `.skill/dragoncard-tool-builder/`（AI/开发者指南）。
+Development guide: `.skill/dragoncard-tool-builder/` (AI/developer guide).
+
+## Free-deck delivery bundle: free_decks/
+
+**Free decks live only here — never in the main `dragoncard/` project.** The main
+project is the host program; adding a deck there means touching it for every deck,
+while most users do not need these decks. Hence the convention:
+
+- A free-deck bundle = `free_decks/<name>/`, a five-piece set:
+  | File | Produced by |
+  |---|---|
+  | `tool.zip` | **synced by build.py** (byte-identical to `dist/<name>.zip`) |
+  | `cards.json` | **synced by build.py** (= `dist/<name>.cards.json`, the one named by `cardsJson` in the manifest) |
+  | `meta.json` | hand-written (name/source/license/counts) |
+  | `readme.txt` | hand-written (bilingual, for whoever receives the deck) |
+  | `LICENSE` | hand-written |
+- Enable with `"freeDeck": true` in the tool's `manifest.json`. After that, every
+  `python3 build.py <name>` also syncs the two **reproducible** artifacts across —
+  and when the content is unchanged the files are left untouched (stable timestamps).
+  The three hand-written files are **never overwritten**; build only warns when one
+  is missing.
+- Handing it to a user is three steps: import `cards.json` to create the deck →
+  upload `tool.zip` in the deck detail to bind it → start learning.
+- Degraded builds from `DC_NO_AUDIO=1` are **not** synced into `free_decks/` (so a
+  zip missing its audio is never shipped as the official package).
+
+> Why not put these back into `dragoncard/default_cards/`: that location is for
+> built-in decks distributed with the host program. Free decks ship via this separate
+> project so the host program stays clean.
