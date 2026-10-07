@@ -369,16 +369,26 @@ html.skin-glass .yj-root.tr-7, html.skin-glass .c-cell.tr-7 { --cat: #9c94b0; }
 }
 .c-rowlabel b { font-size: calc(12px * var(--kt)); font-weight: 800; color: var(--ink2); }
 
+/* 卦格。旧版是「卦符 / 卦名 / 序号」三行竖排，格子只有 9 列宽（~101px），
+   三行一挤卦符只剩 26px、卦名 11.5px —— 认卦靠的就是那个卦象，结果它最小。
+   现在：**卦象当主角占满中间，文字与序号退到卦角**（左下卦名 / 右下序号）。
+   .c-foot 留在**流内**（不是 absolute）⇒ 卦符再大也压不到字上。 */
 .c-cell {
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: calc(2px * var(--kt));
+    /* 卦画与卦角之间留一条缝：原来 gap:0，卦画末条直接贴着卦名 */
+    gap: calc(3px * var(--kt));
     min-width: 0;
-    min-height: calc(78px * var(--kt));
-    padding: calc(8px * var(--kt)) calc(3px * var(--kt)) calc(6px * var(--kt));
+    /* 高度跟格宽走（格宽是 1fr）。写死 min-height 的话，窄屏会变成
+       「细高条 + 中间飘一个小卦象」。 */
+    aspect-ratio: 1 / 1;
+    /* 上下内边距 4/6（原 5/4）：原来的底部只有 4 ⇒ 视觉留白 5px，卦角文字贴着格底。
+       取 4/6 是为了**上下视觉留白相等**：顶 = 3px 彩条 + 4 = 7，底 = 6 + 1px 边框 = 7。
+       代价：卦画高 76.4 → 72.4（−5.2%），条粗 8.17 → 7.75。 */
+    padding: calc(4px * var(--kt)) calc(8px * var(--kt)) calc(6px * var(--kt));
     border-radius: calc(11px * var(--kt));
     background: var(--card-bg);
     border: 1px solid var(--card-line);
@@ -395,16 +405,68 @@ html.skin-glass .yj-root.tr-7, html.skin-glass .c-cell.tr-7 { --cat: #9c94b0; }
     background: transparent;
     border: 1px dashed var(--card-line);
     cursor: default;
-    min-height: calc(78px * var(--kt));
 }
+/* 卦画 = 方图主角，**工具自己画**（与卦卡同一套 hex-line 口径）。
+   条长 = 100% 内容盒宽（铺满格子），条粗 : 条缝 = 9 : 6（与卦卡逐字相同）。
+   ⚠️ 高度**一个 px 都不写死**：6 条横画 + 5 道缝交给 grid 的 fr 权重去分，
+      格宽、字号、行高怎么变都不用重算 —— 第 n 条显式落在第 2n−1 行，空行就是缝。
+   ⚠️ 为什么不继续用字库卦符（䷀–䷿）：Apple Symbols 的墨迹只有 0.59em 宽 × 0.67em 高，
+      em 框空一半，字号调到多大都填不满格宽 —— 只能靠 scaleX 硬拉，那就改了字形比例
+      （实测 1.4 倍 → 长粗比 9.3:1 变 13.7:1，条细 32%，和卦卡上同一个卦对不上）。
+   ⇒ 2026-09-29 用户拍板：走手绘。 */
+.c-lines {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-rows: 1.5fr 1fr 1.5fr 1fr 1.5fr 1fr 1.5fr 1fr 1.5fr 1fr 1.5fr;
+    align-content: stretch;
+    width: 100%;
+    min-height: 0;
+}
+.c-line {
+    grid-column: 1;
+    width: 100%;
+    border-radius: calc(1.4px * var(--kt));
+    background-color: transparent;
+}
+.c-line.yang { background-color: var(--strong); }
+.c-line.yin {
+    background-image: linear-gradient(to right,
+        var(--strong) 0 41%, transparent 41% 59%, var(--strong) 59% 100%);
+}
+/* 第 n 条画落在第 2n−1 行（偶数行留空 = 缝） */
+.c-lines > .c-line:nth-child(1) { grid-row: 1; }
+.c-lines > .c-line:nth-child(2) { grid-row: 3; }
+.c-lines > .c-line:nth-child(3) { grid-row: 5; }
+.c-lines > .c-line:nth-child(4) { grid-row: 7; }
+.c-lines > .c-line:nth-child(5) { grid-row: 9; }
+.c-lines > .c-line:nth-child(6) { grid-row: 11; }
+
+/* 兜底：卡片数据里没有 lines 的老卡才用字库卦符（墨迹小，但至少有东西） */
 .c-symbol {
-    font-size: calc(26px * var(--kt));
-    line-height: 1.15;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(96px * var(--kt));
+    line-height: 1;
     color: var(--strong);
 }
+/* 卦角：卦名贴左下、序号贴右下，一行摆平。
+   ⚠️ 字号 2026-09-29 从 11.5/10 提到 14/12.5（用户："不太容易看清文字"）。
+      格子只有 105px 见方，卦名最长两个汉字（明夷、归妹…）：14px×2 + 序号 3 位
+      仍塞得进内容盒，`.c-name` 保留 ellipsis 兜底。 */
+.c-foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: calc(3px * var(--kt));
+    width: 100%;
+    min-width: 0;
+}
 .c-name {
-    max-width: 100%;
-    font-size: calc(11.5px * var(--kt));
+    min-width: 0;
+    font-size: calc(14px * var(--kt));
+    line-height: 1.15;
     font-weight: 700;
     color: var(--card-ink);
     white-space: nowrap;
@@ -412,26 +474,41 @@ html.skin-glass .yj-root.tr-7, html.skin-glass .c-cell.tr-7 { --cat: #9c94b0; }
     text-overflow: ellipsis;
 }
 .c-no {
-    font-size: calc(9.5px * var(--kt));
+    flex: 0 0 auto;
+    font-size: calc(12.5px * var(--kt));
+    line-height: 1.15;
     font-weight: 700;
     color: var(--muted);
-    line-height: 1.2;
 }
 .c-star {
     position: absolute;
-    top: calc(4px * var(--kt));
-    right: calc(5px * var(--kt));
-    font-size: calc(10px * var(--kt));
+    top: calc(5px * var(--kt));
+    right: calc(6px * var(--kt));
+    font-size: calc(11px * var(--kt));
     color: var(--gold);
     pointer-events: none;
 }
 .c-fav {
     position: absolute;
-    top: calc(4px * var(--kt));
-    left: calc(5px * var(--kt));
-    font-size: calc(10px * var(--kt));
+    top: calc(5px * var(--kt));
+    left: calc(6px * var(--kt));
+    font-size: calc(11px * var(--kt));
     color: var(--rose);
     pointer-events: none;
+}
+/* 卦符是定死的 px 字号，格宽却是 1fr（跟着视口走）—— 两者天生矛盾：
+   格宽窄下去时，96px 的卦符会顶出格子被 overflow 切掉。
+   用容器查询按**格子的内容盒宽**锁上限。推导（用实测的墨迹比，不是字号比）：
+     墨迹 ≈ 0.59em 宽 × 0.67em 高；格子留给卦象的高 = 内容盒宽 − 14px（扣掉 .c-foot 那行）；
+     再留 15% 余量 ⇒ 0.67em ≤ 0.85 × (内容盒宽 − 14) ⇒ em ≤ 1.25 × 内容盒宽 − 17。
+   数算：桌面格 106px ⇒ 内容盒 88px ⇒ 125cqw−17 = 93px（墨迹 55×62，占格 52%/59%）；
+         手机格 76px ⇒ 内容盒 58px ⇒ 55px（墨迹 32×37）。
+   ⚠️ cqw 量的是**内容盒**（padding 与 border 已扣掉），不是格子外框 —— 别按外框估。
+   踩过的错 1：写 62cqw，桌面没事，但 390px 手机上算成 10.7px，卦符比卦名还小，方向反了。
+   踩过的错 2：按"字号 1.15em"推墨迹高 ⇒ 上限算小了一半（这个字体的卦符墨迹只有 0.67em）。 */
+@supports (container-type: inline-size) {
+    .c-cell { container-type: inline-size; }
+    .c-symbol { font-size: min(calc(96px * var(--kt)), calc(125cqw - 17px * var(--kt))); }
 }
 
 /* 从方图跳过来时闪一下 */
@@ -475,6 +552,114 @@ html.skin-category .yj-intro-hex { background: #fff; }
     .dc-acts button { width: 34px; height: 34px; font-size: 17px; }
     .yj-mid { flex-wrap: wrap; }
     .yj-head { flex: 1 1 100%; }
-    .yj-chart { gap: calc(4px * var(--kt)); }
-    .c-name { font-size: calc(10px * var(--kt)); }
+    /* 卦序方图在手机上摆不下：390px 宽 9 列 ⇒ 每格才 35px 宽，
+       卦象会缩到比卦名还小，"认卦"这件事就废了。
+       ⇒ 给格子一个**下限量宽 76px**，让方图自己横向滚动，而不是把格子压扁。
+       ⚠️ 这里别再改 .c-cell 的 min-height —— 格子高度现在由 aspect-ratio 跟着格宽走。 */
+    .yj-chart {
+        gap: calc(4px * var(--kt));
+        grid-template-columns: repeat(9, minmax(calc(76px * var(--kt)), 1fr));
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    /* 手机格子被限到 76px 宽（内容盒 58px），卦角字号比桌面收一档，
+       否则两个汉字 + 两位序号就顶出去了（桌面是 14 / 12.5） */
+    /* 手机格子只有 76px 见方，上下内边距与缝按比例收一档（桌面 4/6/3 对 105.8px）。
+       不按比例收的话，卦画会被挤掉 12%（实测）。按 3/4/2 收，手机上卦画高度分文不减。 */
+    .c-cell {
+        gap: calc(2px * var(--kt));
+        padding: calc(3px * var(--kt)) calc(6px * var(--kt)) calc(4px * var(--kt));
+    }
+    .c-name { font-size: calc(12.5px * var(--kt)); }
+    .c-no { font-size: calc(11.5px * var(--kt)); }
+}
+
+/* ==========================================================================
+   8. 卦卡弹窗（点卦序方图的格子）
+   ==========================================================================
+   遮罩 + 居中的一张卦卡。卡面就是「卦卡」视图里那张（同一个 renderGuaCard），
+   只多 .yj-modal-root 与轨道末尾的关闭钮。
+   为什么不做"下钻"：方图是**查阅面**，点一格只是想看这一卦；
+   下钻会把方图里的位置感丢掉（跟 chemistry-periodic 的元素弹窗同一个判断）。
+
+   ⚠️ 弹窗里动作轨道是 **4 个**（朗读 / 标记 / 收藏 / 关闭）⇒ 比列表里那张宽 42px，
+      所以 .yj-modal-root 的右留白要从 158px 加到 190px，否则「第 N 卦」那排胶囊
+      会跑到轨道底下去。
+   ⚠️ 滚动放在遮罩上（overflow:auto）而不是弹窗盒上，配合 box 的 margin:auto：
+      内容不高时居中、超高时从顶部开始滚（flex 居中 + 容器滚动在溢出时会把顶边吃掉）。
+   ========================================================================== */
+.yj-modal-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 60;              /* 顶栏 50 < 弹窗 60 < 下拉 100/200 < toast 999 < tooltip 99999 */
+    display: flex;
+    overflow: auto;
+    padding: 20px;
+    background: rgba(44, 36, 20, .42);
+    animation: yjMaskIn .18s ease both;
+}
+.yj-modal-mask[hidden] { display: none; }
+@keyframes yjMaskIn { from { opacity: 0; } }
+
+.yj-modal-box {
+    margin: auto;             /* 水平居中 + 溢出时可滚到顶 */
+    width: 100%;
+    max-width: 620px;
+    outline: none;            /* 只是收键盘焦点的容器，不画环 */
+}
+.yj-modal-root {
+    margin-bottom: 0;
+    padding-right: calc(190px * var(--kt));
+    box-shadow: 0 12px 36px rgba(58, 44, 20, .26);
+    animation: yjModalIn .24s cubic-bezier(.2, .8, .3, 1) both;
+}
+@keyframes yjModalIn { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+
+/* ⚠️ 弹窗必须是**实底**：glass 皮肤的卡面是半透明的（rgba(255,255,255,.07) +
+   backdrop-filter），前提是浮在扁平的深色页面上；叠到花花绿绿的方图上会直接透过去、
+   字全糊。--panel-solid 就是为"要一块实色面板"定的。 */
+html.skin-glass .yj-modal-root {
+    background: var(--panel-solid);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, .55);
+}
+html.skin-glass .yj-modal-mask { background: rgba(8, 5, 14, .62); }
+
+/* 关闭钮长在动作轨道末尾：尺寸/hover 全部继承 .dc-acts button，只加一条左分隔线
+   （用 box-shadow 而不是 border-left —— 轨道按钮有 border-radius，画 border 会拐角） */
+.dc-acts button.yj-modal-close { margin-left: 4px; box-shadow: -4px 0 0 -3px var(--acts-line); }
+
+/* 右下角：走回"下钻到卦卡"的老路（产品上这条路径还要有，只是不再是默认） */
+.yj-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: calc(10px * var(--kt));
+    padding-top: calc(10px * var(--kt));
+    border-top: 1px dashed var(--card-line);
+}
+.yj-modal-jump {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    font-size: calc(12.5px * var(--kt));
+    color: var(--muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.yj-modal-jump:hover { color: var(--accent); }
+.yj-modal-jump:hover .yj-modal-jump-t { text-decoration: underline; }
+
+/* 弹窗开着时，后面那层列表不许跟着滚 */
+body.yj-modal-open .study-scroll { overflow: hidden; }
+
+@media (max-width: 720px) {
+    .yj-modal-mask { padding: 10px; }
+    /* 手机上卡片占满宽度，靠"右留白"躲开 4 个按钮已经躲不开了 ⇒
+       改成让轨道浮在标题上面：给卡片顶部留出一条空带，轨道就压不到「第 N 卦」那排胶囊。 */
+    .yj-modal-root {
+        padding-right: calc(18px * var(--kt));
+        padding-top: calc(52px * var(--kt));
+    }
 }

@@ -235,7 +235,16 @@ html.skin-glass .study-top-bar { backdrop-filter: blur(18px) saturate(150%); }
     width: 100%;
     max-width: 660px;          /* 660 − 左右各 20 padding = 卡片列 620（P4） */
     margin: 0 auto;
-    flex: 1;
+    /* ⚠️ 必须是 `flex: 1 0 auto`，不能写 `flex: 1`。
+       `flex: 1` 展开是 `1 1 0%` —— **flex-shrink 默认 1**：内容比滚动容器高时
+       （卦序方图桌面 944px vs 容器 842px），.study-content 会被压成容器高，
+       而子元素 #study-list 是 `flex: 1 0 auto`（绝不压缩）⇒ 内容整块**溢出** 150px，
+       这里的 `padding: 24px 20px` 下边那 24px 就被整个吃掉 ——
+       滚到底时方图最后一行**紧贴视口底边（0px）**，肉眼就是"内容贴着底"。
+       （2026-09-29 用户反馈「卦序图最下面就是紧贴了底部」，实测复现。）
+       shrink 改 0 之后：内容高 ⇒ .study-content 长到「content + 上下 padding」，
+       24px 恢复生效；内容矮 ⇒ flex-grow 仍然撑满容器（单卡模式垂直居中靠它）。 */
+    flex: 1 0 auto;
     min-height: 0;
     padding: 24px 20px;
     display: flex;
@@ -244,8 +253,10 @@ html.skin-glass .study-top-bar { backdrop-filter: blur(18px) saturate(150%); }
 /* 单卡模式：一次只看一张，给它更宽的行（不然左右两条导航会把卡挤到 550px，
    比列表模式还窄）；JS 在切模式时给 .study-content 挂 .wide。 */
 .study-content.wide { max-width: 900px; }
-/* 五十音图视图：表格需要更宽的行（5 段 + 1 列行名）。JS 切到图表时挂 .chart-wide。 */
-.study-content.chart-wide { max-width: 1000px; }
+/* 卦序方图：9 列（1 列行头 + 8 个下卦）要摆得开，格子才装得下大卦象。
+   （原注释抄的是五十音图，与周易无关，2026-09-29 更正。）
+   1000 → 1080px，格宽 101 → 110px。 */
+.study-content.chart-wide { max-width: 1080px; }
 /* flex: 1 0 auto —— 短卡组时撑满面板（单卡模式还要靠它垂直居中），但**绝不压缩**。
    原写法 flex:1 / min-height:0 会把列表压成面板高（实测 837px），里面的
    position:sticky 分组标题只能吸 837px 就被"顶走"（探针在 scrollTop=1400 抓到

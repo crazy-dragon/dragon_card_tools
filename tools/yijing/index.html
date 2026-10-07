@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="assets/cards.css">
   <script>
     /* 周易：一 zip 双卡组，按 cardAPI.deckId 自适应（与 exam-vocab 同一模式）——
-         deck 2 周易64卦：views = 卦序方图（上卦×下卦 8×8，点格子跳卡）+ 卦卡。
+         deck 2 周易64卦：views = 卦序方图（上卦×下卦 8×8，点格子弹窗看卦卡）+ 卦卡。
                            ⚠️ 数据 lines 是自上而下编码（首位=顶爻），卦画必须
                            首字符画在最上 —— 这是 2026-09-26 数据审计的结论，
                            渲染方向错了 64 卦全部上下颠倒。
@@ -82,6 +82,14 @@
       </div>
     </div>
     <button id="reset-fonts" class="reset-btn">复位</button>
+  </div>
+
+  <!-- 点卦序方图的格子 → 就地弹窗看卦卡。卡面由 app.js::openGuaModal() 注入，
+       和「卦卡」视图里那张是同一个 renderGuaCard，只多 .yj-modal-root 与关闭钮。
+       方图是查阅面：看完关掉人就还在原处，位置感不丢。 -->
+  <div class="yj-modal-mask" id="gua-modal" hidden>
+    <div class="yj-modal-box" id="gua-modal-box" role="dialog" aria-modal="true"
+         aria-label="卦卡" tabindex="-1"></div>
   </div>
 
   <div id="global-tooltip" class="action-btn-tooltip"></div>

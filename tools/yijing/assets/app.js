@@ -132,15 +132,56 @@
       }
     },
     _primary: function (tag) { return String(tag || '').split('-')[0].toLowerCase(); },
+    /* 「变声玩具」判据：同一个基名被注册到 ≥2 个主语言下。
+       macOS 把 Eddy / Grandma / Sandy … 这 8 个 novelty 角色铺到 10 个语言，
+       实测它们在 zh / ja / ko 下共用同一段基础语音、只换变调：
+         zh — 16 个音色只有 3 种字节长度，彼此包络相关 0.82–0.99，与真音色负相关 −0.26
+         ja — 8 个音色字节数完全相同（185064）
+         ko — 8 个音色 194538–194550
+       真音色（Tingting / Meijia / Kyoko / Yuna …）只在单一语言下注册，不会误伤。
+       只在 _toyHideLangs 里实测过的语系生效：英文的 novelty 是 coca20000 的现役
+       音色，未实测，不动。 */
+    _voiceBase: function (name) { return String(name || '').replace(/\s*\(.*\)\s*$/, '').trim(); },
+    _toyHideLangs: ['zh', 'ja', 'ko'],
+    toySet: function () {
+      if (this._toyCache && this._toyFor === this.voices) return this._toyCache;
+      var langsOf = {}, self = this;
+      (this.voices || []).forEach(function (v) {
+        var b = self._voiceBase(v.name);
+        if (!langsOf[b]) langsOf[b] = {};
+        langsOf[b][self._primary(v.lang)] = 1;
+      });
+      var set = {};
+      Object.keys(langsOf).forEach(function (b) {
+        if (Object.keys(langsOf[b]).length >= 2) set[b] = 1;
+      });
+      this._toyCache = set;
+      this._toyFor = this.voices;
+      return set;
+    },
+    isToy: function (v) {
+      if (this._toyHideLangs.indexOf(this._primary(v.lang)) < 0) return false;
+      return !!this.toySet()[this._voiceBase(v.name)];
+    },
     pickVoice: function (lang) {
       if (!lang) return null;
       var primary = this._primary(lang);
       var saved = null;
       try { saved = localStorage.getItem('dc-voice-' + primary); } catch (e) {}
+      /* 用户显式选过就用它（音色可能已被系统删掉 ⇒ 忽略、继续往下挑）。
+         必须放在循环外：塞进循环里的话「精确 lang 命中」会先 return，
+         而中文音色表第一个就是 zh-CN，用户每次改音色都会被它抢先。 */
+      if (saved) {
+        for (var j = 0; j < this.voices.length; j++) {
+          /* 玩具音色（见 isToy）不算用户的有效选择：中文下默认要落到 Tingting，
+             而不是音色表第一个 zh-CN 的 Eddy */
+          if (this.voices[j].voiceURI === saved && !this.isToy(this.voices[j])) return this.voices[j];
+        }
+      }
       var fallback = null;
       for (var i = 0; i < this.voices.length; i++) {
         var v = this.voices[i];
-        if (saved && v.voiceURI === saved) return v;
+        if (this.isToy(v)) continue;   /* 玩具不参与自动挑选 */
         if (!fallback && this._primary(v.lang) === primary) fallback = v;
         if (v.lang && v.lang.toLowerCase() === String(lang).toLowerCase()) return v;
       }
@@ -175,6 +216,9 @@
     list.innerHTML = '';
     var lang = voiceMgr._primary(VOICE_LANG);
     var voices = voiceMgr.voices.filter(function (v) { return voiceMgr._primary(v.lang) === lang; });
+    /* 隐藏「变声玩具」音色；若该语言下全是玩具（理论上不会）就退回完整列表，免得下拉空掉 */
+    var realVoices = voices.filter(function (v) { return !voiceMgr.isToy(v); });
+    if (realVoices.length) voices = realVoices;
     var pick = voiceMgr.pickVoice(VOICE_LANG);
     var activeUri = pick ? pick.voiceURI : null;
     if (!voices.length) {
@@ -265,7 +309,7 @@
   function partOf(number) { return Number(number) <= 30 ? '上经' : '下经'; }
 
   /* ===== 卡面 ===== */
-  function railButtons(card) {
+  function railButtons(card, withClose) {
     var markOn = card.is_unknown === 1;
     var favOn = card.is_favorite === 1;
     return '<div class="dc-acts">' +
@@ -274,14 +318,19 @@
         (markOn ? '取消标记' : '标记为不认识') + '"><i class="' + (markOn ? 'fa-solid' : 'fa-regular') + ' fa-star"></i></button>' +
       '<button type="button" class="act-fav' + (favOn ? ' is-active' : '') + '" data-action="favorite" data-tooltip="' +
         (favOn ? '取消收藏' : '收藏') + '"><i class="' + (favOn ? 'fa-solid' : 'fa-regular') + ' fa-bookmark"></i></button>' +
+      /* 弹窗里多一个关闭钮（继承 .dc-acts button 的尺寸与 hover，只加一条左分隔线）。
+         轨道因此宽 42px ⇒ .yj-modal-root 的右留白要跟着加（见 cards.css）。 */
+      (withClose ? '<button type="button" class="yj-modal-close" data-act="modal-close" data-tooltip="关闭（Esc）">' +
+        '<i class="fa-solid fa-xmark"></i></button>' : '') +
       '</div>';
   }
 
-  function renderGuaCard(card) {
+  function renderGuaCard(card, inModal) {
     var d = card.data || {};
     var up = triIdx(d.upper), cls = 'tr-' + (up >= 0 ? up : 0);
-    return '<div class="yj-root ' + cls + '" data-card-id="' + card.id + '">' +
-      railButtons(card) +
+    return '<div class="yj-root ' + cls + (inModal ? ' yj-modal-root' : '') +
+      '" data-card-id="' + card.id + '">' +
+      railButtons(card, inModal) +
       '<div class="yj-top">' +
         '<span class="yj-no">第 ' + esc(d.number) + ' 卦</span>' +
         '<span class="yj-chip">' + esc(partOf(d.number)) + '</span>' +
@@ -304,6 +353,9 @@
       (d.judgment ? '<div class="yj-judgment" data-say="' + esc(d.judgment) + '" data-tooltip="读卦辞">' +
         '<span class="yj-jl">卦辞</span>' + esc(d.judgment) + '</div>' : '') +
       (d.meaning ? '<div class="yj-meaning">' + esc(d.meaning) + '</div>' : '') +
+      /* 右下角留一条"下钻到卦卡"的老路：方图默认不跳，但产品上这条路径还要有 */
+      (inModal ? '<div class="yj-modal-foot"><button type="button" class="yj-modal-jump" data-act="modal-jump">' +
+        '<i class="fa-solid fa-list-ul"></i><span class="yj-modal-jump-t">在卦卡中查看</span></button></div>' : '') +
     '</div>';
   }
 
@@ -334,17 +386,29 @@
     return state.mode === 'gua' ? renderGuaCard(card) : renderIntroCard(card);
   }
 
-  /* ===== 卦序方图（行=上卦，列=下卦，行/列均按先天卦序） ===== */
+  /* ===== 卦序方图（行=上卦，列=下卦，行/列均按先天卦序） =====
+     格子里只有两样：**大卦象**（占满中间）+ **卦角小字**（左下卦名 / 右下序号）。
+     别再回到"卦符 / 卦名 / 序号"三行竖排 —— 格子只有 9 列宽，
+     三行一挤卦符就只剩 26px，这是 2026-09-29 改掉的毛病。 */
   function chartCell(card) {
     var d = card.data || {};
     var up = triIdx(d.upper);
-    return '<div class="c-cell tr-' + (up >= 0 ? up : 0) + '" data-card-id="' + card.id + '" data-act="jump"' +
+    var lines = String(d.lines || '');
+    /* 卦画改成**工具自己画**（与卦卡同一套 hex-line 口径），条长铺满格子宽。
+       字库卦符（Apple Symbols 的 U+4DC0）墨迹只有 0.59em×0.67em，怎么调字号都填不满格宽。
+       数据里没有 lines 的老卡退回字库卦符。 */
+    var face = /^[01]{6}$/.test(lines)
+      ? '<span class="c-lines">' + hexLines(lines, 'c-line') + '</span>'
+      : '<span class="c-symbol">' + (hexSymbol(d.number) || esc(d.name)) + '</span>';
+    return '<div class="c-cell tr-' + (up >= 0 ? up : 0) + '" data-card-id="' + card.id + '" data-act="open"' +
       ' data-tooltip="第' + esc(d.number) + '卦 ' + esc(d.name) + ' · 点一下看卦卡">' +
       (card.is_unknown === 1 ? '<span class="c-star"><i class="fa-solid fa-star"></i></span>' : '') +
       (card.is_favorite === 1 ? '<span class="c-fav"><i class="fa-solid fa-bookmark"></i></span>' : '') +
-      '<span class="c-symbol">' + (hexSymbol(d.number) || esc(d.name)) + '</span>' +
-      '<span class="c-name">' + esc(d.name) + '</span>' +
-      '<span class="c-no">' + esc(d.number) + '</span>' +
+      face +
+      '<span class="c-foot">' +
+        '<span class="c-name">' + esc(d.name) + '</span>' +
+        '<span class="c-no">' + esc(d.number) + '</span>' +
+      '</span>' +
       '</div>';
   }
 
@@ -480,6 +544,7 @@
     cardAPI.mark(card.id, want).then(function (d) {
       card.is_unknown = (d && typeof d.is_unknown !== 'undefined') ? d.is_unknown : want;
       cardAPI.track('word_mark', card.id);
+      if (yjModalOpen()) patchGuaModal(card);
       if (state.mode === 'gua' && state.view === 'chart') patchCell(card);
       else if (state.singleCardMode) renderSingleCardContent(state.singleCardIndex, false);
       else patchCard(card);
@@ -491,6 +556,7 @@
     cardAPI.favorite(card.id, want).then(function (d) {
       card.is_favorite = (d && typeof d.is_favorite !== 'undefined') ? d.is_favorite : want;
       cardAPI.track('favorite_toggle', card.id);
+      if (yjModalOpen()) patchGuaModal(card);
       if (state.mode === 'gua' && state.view === 'chart') patchCell(card);
       else if (state.singleCardMode) renderSingleCardContent(state.singleCardIndex, false);
       else patchCard(card);
@@ -518,6 +584,53 @@
     });
   }
 
+  /* ===== 卦卡弹窗（点方图格子） =====
+     方图是「查阅面」：点一格就是想看这一卦，弹窗看完关掉、人还站在原地 ——
+     不下钻到「卦卡」视图，方图里的位置感就不会丢。
+     整套做法照搬 chemistry-periodic 的元素弹窗（遮罩 + 居中卡面 + 右下角"下钻"老路）。 */
+  var modalCardId = null;
+
+  function yjModalOpen() {
+    var m = $id('gua-modal');
+    return !!(m && !m.hidden);
+  }
+
+  function openGuaModal(id) {
+    var card = findCard(id);
+    if (!card || state.mode !== 'gua') { jumpToCard(id); return; }
+    var mask = $id('gua-modal');
+    var box = $id('gua-modal-box');
+    if (!mask || !box) { jumpToCard(id); return; }   /* 兜底：没有弹窗节点就还是跳卡 */
+    playName(card);                                  /* 点格子仍读一次卦名（旧行为，别丢） */
+    modalCardId = String(card.id);
+    box.innerHTML = renderGuaCard(card, true);
+    mask.hidden = false;
+    box.scrollTop = 0;
+    document.body.classList.add('yj-modal-open');
+    try { box.focus(); } catch (e) {}
+  }
+
+  function closeGuaModal() {
+    var mask = $id('gua-modal');
+    if (!mask || mask.hidden) return;
+    mask.hidden = true;
+    /* 顺手清掉卡面：留着的话弹窗里那张会一直挂在 DOM 上，
+       外部按 .yj-root 计数/取样式时就会多出一份（探针当场抓到 64 → 65）。 */
+    var box = $id('gua-modal-box');
+    if (box) box.innerHTML = '';
+    modalCardId = null;
+    document.body.classList.remove('yj-modal-open');
+  }
+
+  /* 标记 / 收藏后只重画弹窗里这一张，保留滚动位置（弹窗内容可能比视口高） */
+  function patchGuaModal(card) {
+    var box = $id('gua-modal-box');
+    if (!box) return;
+    var top = box.scrollTop;
+    box.innerHTML = renderGuaCard(card, true);
+    box.scrollTop = top;
+  }
+
   /* ===== 视图切换 ===== */
   function renderViewSeg() {
     var box = $id('view-seg');
@@ -529,6 +642,7 @@
   }
   function setView(id) {
     if (state.view === id && !state.singleCardMode) return;
+    closeGuaModal();
     state.view = id;
     state.singleCardMode = false;
     state.singleCardIndex = 0;
@@ -560,11 +674,23 @@
         if (sCard) playText(sCard, sayEl.dataset.say);
         return;
       }
-      /* 方图格子 = 读卦名 + 跳卡 */
-      var cell = target.closest('.c-cell[data-act="jump"]');
+      /* 弹窗：关闭 / 在卦卡中查看 / 点遮罩空白处关闭
+         （必须先判：格子在遮罩下面，顺序反了会点穿） */
+      if (target.closest('[data-act="modal-close"]')) { e.stopPropagation(); closeGuaModal(); return; }
+      if (target.closest('[data-act="modal-jump"]')) {
+        e.stopPropagation();
+        var jumpId = modalCardId;
+        closeGuaModal();
+        if (jumpId) jumpToCard(jumpId);
+        return;
+      }
+      if (target.id === 'gua-modal') { closeGuaModal(); return; }
+
+      /* 方图格子 = 就地弹窗看卦卡（不再下钻到下面的卦卡列表） */
+      var cell = target.closest('.c-cell[data-act="open"]');
       if (cell) {
         e.stopPropagation();
-        jumpToCard(cell.dataset.cardId);
+        openGuaModal(cell.dataset.cardId);
         return;
       }
       /* 卡片动作 */
@@ -682,6 +808,11 @@
     });
 
     document.addEventListener('keydown', function (e) {
+      /* 弹窗开着时 Esc 只关弹窗，别的键都不管 */
+      if (yjModalOpen()) {
+        if (e.key === 'Escape') { e.preventDefault(); closeGuaModal(); }
+        return;
+      }
       if (!state.singleCardMode) return;
       if (e.key === 'ArrowLeft') { e.preventDefault(); singleCardNav(-1); }
       else if (e.key === 'ArrowRight') { e.preventDefault(); singleCardNav(1); }
