@@ -20,13 +20,18 @@
    动作栏放在**卡片底部右对齐**（原模板的位置），不是右上角悬浮轨道。
    ========================================================================== */
 
-/* ===== 1. 套别配色（6 套；索引来自数据里的 setIndex） ===== */
-.st-set1 { --cat: #b0442f; }
-.st-set2 { --cat: #2f6ac0; }
-.st-set3 { --cat: #a1841c; }
-.st-set4 { --cat: #7c44b4; }
-.st-set5 { --cat: #1f8a70; }
-.st-set6 { --cat: #b0446b; }
+/* ===== 1. 套别配色（6 套；索引来自数据里的 setIndex） =====
+   2026-09-29 微调（用户拍板「P1 宣纸：在现状上微调」）：原来 set3 藤黄 #a1841c、
+   set5 松绿 #1f8a70 印在米黄纸上偏浅，做**方图行首小字**时发灰；
+   统一往深压一档，白字胶囊的对比也更稳。set1/set4 原样不动。 */
+.st-set1 { --cat: #b0442f; --cat-soft: #f7e9e5; }   /* 赭红 · 胜战 */
+.st-set2 { --cat: #2c66bd; --cat-soft: #e6eefb; }   /* 石青 · 敌战 */
+.st-set3 { --cat: #8f7410; --cat-soft: #f4eeda; }   /* 藤黄 · 攻战 */
+.st-set4 { --cat: #7c44b4; --cat-soft: #f0e9fa; }   /* 紫 · 混战 */
+.st-set5 { --cat: #1b7f67; --cat-soft: #e2f1ed; }   /* 松绿 · 并战 */
+.st-set6 { --cat: #ab3f66; --cat-soft: #f8e8ee; }   /* 胭脂 · 败战 */
+/* --cat-soft 只有「分类彩」皮肤下的概览方图格子会读（见第 10 节）。
+   直接写死色值而不用 color-mix()，是为了不把兼容性赌在 2023 年的浏览器特性上。 */
 html.skin-glass .st-set1 { --cat: #e0806a; }
 html.skin-glass .st-set2 { --cat: #7fa9e8; }
 html.skin-glass .st-set3 { --cat: #cbb553; }
@@ -34,8 +39,11 @@ html.skin-glass .st-set4 { --cat: #c19bf0; }
 html.skin-glass .st-set5 { --cat: #5fc7a8; }
 html.skin-glass .st-set6 { --cat: #e88aae; }
 
-/* ===== 2. 卡面的皮肤 token（默认 = 原模板的纸色） ===== */
-.st-root {
+/* ===== 2. 卡面的皮肤 token（默认 = 原模板的纸色） =====
+   ⚠️ 同时挂在 `.st-root`（卡面）和 `.st-chart`（概览方图）上：方图不是卡片，
+      但要用同一套纸色 / 墨色 / 描边色，声明一份两处共用。
+      —— 方图格子上的 `--cat` 由 `.st-c-row.st-setN` 给（见第 5 节）。 */
+.st-root, .st-chart {
     --st-bg: #f3e9d2;
     --st-ink: #3a2e22;
     --st-line: #b89b6a;
@@ -47,7 +55,7 @@ html.skin-glass .st-set6 { --cat: #e88aae; }
     --st-pill-fg: #f7efe0;
     --st-act-bg: #fbf3e0;
 }
-html.skin-glass .st-root {
+html.skin-glass .st-root, html.skin-glass .st-chart {
     --st-bg: #221d29;
     --st-ink: #ece6f2;
     --st-line: rgba(255, 255, 255, .20);
@@ -297,6 +305,153 @@ html.lang-en .st-root { --st-whoosh: 'Whoosh——'; }
 .st-acts button.act-mark.is-active { color: var(--gold); }
 .st-acts button.act-fav.is-active { color: var(--rose); }
 
-/* ===== 10. 单卡模式：卡在舞台里独占一行 ===== */
-.single-card-stage .st-root { box-shadow: 0 12px 34px rgba(58, 44, 20, .16); }
-html.skin-glass .single-card-stage .st-root { box-shadow: 0 16px 44px rgba(0, 0, 0, .5); }
+/* ==========================================================================
+   10. 概览方图（6 套 × 6 计）
+   ==========================================================================
+   行 = 套别，列 = 该套第 1..6 计。**每一行是一个 7 列 grid**（行首 1 列 + 格子 6 列），
+   各行用同一套 track 尺寸 ⇒ 列天然对齐，不用 display:contents 那种花招。
+
+   配色分工：
+     格子骨架（纸底 / 描边 / 圆角）走 .st-chart 上的 --st-* 皮肤 token（第 2 节）；
+     套别色 --cat 只出现在**顶部 3px 色条 + 行首竖条 + 套名**上 ——
+     6 条色带扫一眼就是格局，格子里再上色就花了。
+   窄屏不硬挤：外层横向滚动，格子保底 92px（4 个汉字放得下）。
+   ★ 字号全部吃 --kt（= --k × 工具字号滑杆），所以滑杆拉到底格子也跟着长，
+     盒子尺寸同样乘 --kt，比例不会走形（见项目铁律）。
+   ========================================================================== */
+.st-c-wrap { overflow-x: auto; padding-bottom: 4px; }
+.st-chart {
+    display: flex;
+    flex-direction: column;
+    gap: calc(16px * var(--kt));
+    min-width: 880px;               /* 行首 168 + 6×112 + 5 条缝 + 边距 */
+    padding: 4px 2px;
+}
+.st-c-row {
+    display: grid;
+    grid-template-columns: 168px repeat(6, minmax(112px, 1fr));
+    gap: calc(8px * var(--kt));
+    align-items: stretch;
+}
+.st-c-rh {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: calc(3px * var(--kt));
+    padding: calc(4px * var(--kt)) calc(8px * var(--kt));
+    border-left: 3px solid var(--cat);
+    border-radius: 0 calc(6px * var(--kt)) calc(6px * var(--kt)) 0;
+    transition: background .15s;
+}
+.st-c-rh[data-act] { cursor: pointer; }
+.st-c-rh[data-act]:hover { background: var(--st-soft); }
+.st-c-set {
+    font-size: calc(15px * var(--kt));
+    font-weight: 700;
+    color: var(--cat);
+    letter-spacing: 1px;
+    line-height: 1.25;
+    font-family: Georgia, "Songti SC", "STSong", "Noto Serif SC", serif;
+}
+.st-c-theme {
+    font-size: calc(11.5px * var(--kt));
+    color: var(--st-quiet);
+    line-height: 1.45;
+}
+
+.st-c-cell {
+    position: relative;
+    min-height: calc(76px * var(--kt));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(5px * var(--kt));
+    padding: calc(12px * var(--kt)) calc(6px * var(--kt)) calc(10px * var(--kt));
+    background: var(--st-bg);
+    border: 1px solid var(--st-line);
+    border-top: 3px solid var(--cat);
+    border-radius: calc(9px * var(--kt));
+    cursor: pointer;
+    transition: transform .12s, box-shadow .12s;
+}
+.st-c-cell:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(30, 20, 10, .14); }
+html.skin-glass .st-c-cell:hover { box-shadow: 0 8px 20px rgba(0, 0, 0, .5); }
+.st-c-cell:active { transform: scale(.98); }
+/* 该套不足 6 张时的占位列：占住列宽但不可见 */
+.st-c-cell.empty { visibility: hidden; }
+.st-c-no {
+    font-size: calc(11px * var(--kt));
+    color: var(--st-hint);
+    line-height: 1;
+    letter-spacing: .5px;
+}
+.st-c-nm {
+    font-size: calc(21px * var(--kt));
+    font-weight: 700;
+    letter-spacing: calc(2px * var(--kt));
+    line-height: 1.25;
+    text-align: center;
+    font-family: Georgia, "Songti SC", "STSong", "Noto Serif SC", serif;
+}
+/* 英文计名最长 30 字符（"Cross the Sea Under Camouflage"）⇒ 整体降字号，让它 2~3 行排完 */
+html.lang-en .st-c-nm { font-size: calc(12.5px * var(--kt)); font-weight: 600; letter-spacing: 0; line-height: 1.3; }
+html.lang-en .st-c-cell { min-height: calc(84px * var(--kt)); }
+html.lang-en .st-c-row { grid-template-columns: 200px repeat(6, minmax(118px, 1fr)); }
+html.lang-en .st-chart { min-width: 950px; }
+
+/* 标记 / 收藏角标：方图同时兼「进度盘」——扫一眼就知道哪几计标过 */
+.st-c-star, .st-c-fav { position: absolute; top: calc(6px * var(--kt)); font-size: calc(11px * var(--kt)); }
+.st-c-star { right: calc(6px * var(--kt)); color: var(--gold); }
+.st-c-fav { right: calc(19px * var(--kt)); color: var(--rose); }
+
+/* 分类彩：格子按套别淡染 —— 这才是「分类彩」在方图上的意义（6 色成块） */
+html.skin-category .st-c-cell { background: var(--cat-soft); }
+
+/* ==========================================================================
+   11. 概览弹窗（点方图的格子 / 行首）
+   ==========================================================================
+   卡面就是列表里那张（同一个 renderCard），只多 .st-modal-root、轨道末尾的关闭钮、
+   右下角「在列表中查看」。底盘（遮罩 / 居中 / 滚动）在 app.css 第 5 节。
+   ========================================================================== */
+.st-modal-root {
+    margin-bottom: 0;
+    box-shadow: 0 12px 36px rgba(58, 44, 20, .26);
+    animation: stModalIn .24s cubic-bezier(.2, .8, .3, 1) both;
+}
+@keyframes stModalIn { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+
+/* ⚠️ 弹窗必须是**实底**：glass 皮肤的卡面是半透明的（rgba(255,255,255,.07) +
+   backdrop-filter），前提是浮在扁平的深色页面上；叠到花花绿绿的方图上会直接透过去、
+   字全糊。--panel-solid 就是为"要一块实色面板"定的。 */
+html.skin-glass .st-modal-root {
+    background: var(--panel-solid);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, .55);
+}
+
+/* 关闭钮长在动作轨道末尾：尺寸/hover 全部继承 .st-acts button，只加一条左分隔线
+   （用 box-shadow 而不是 border-left —— 轨道按钮有 border-radius，画 border 会拐角） */
+.st-acts button.st-modal-close { margin-left: 4px; box-shadow: -4px 0 0 -3px var(--st-line); }
+
+/* 右下角：走回「列表」视图的老路（概览默认不跳列表，但产品上这条路还要有） */
+.st-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: calc(10px * var(--kt));
+    padding-top: calc(10px * var(--kt));
+    border-top: 1px dashed var(--st-line);
+}
+.st-modal-jump {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    font-size: calc(12.5px * var(--kt));
+    color: var(--st-quiet);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.st-modal-jump:hover { color: var(--st-accent); }
+.st-modal-jump:hover .st-modal-jump-t { text-decoration: underline; }

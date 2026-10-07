@@ -12,11 +12,14 @@
   <link rel="stylesheet" href="assets/app.css">
   <link rel="stylesheet" href="assets/cards.css">
   <script>
-    /* 三十六计：中英双语合成一份卡组（42 张 = 36 计 + 6 张套别总览），
-       顶栏的分段控件切「中文 / English」—— 切的是**同一张卡的两种语言**，
-       不是两个视图，所以标记状态、计数、翻面状态都不受影响，只有文案跟着换。
+    /* 三十六计：中英双语合成一份卡组（42 张 = 36 计 + 6 张套别总览）。
+       顶栏有**两个**分段控件：
+         #view-seg 概览 / 列表 —— 视图（方图 vs 卡片），标签跟着语言走，见 app.js 的 VIEWS
+         #lang-seg 中文 / English —— 切的是**同一张卡的两种语言**，不是两个视图，
+                    所以标记状态、计数、翻面状态都不受影响，只有文案跟着换。
        计卡是「正面（计名/拼音/原文）→ 翻面（释义/典故/现代应用）」两张脸；
-       总览卡没有翻面。没有眼睛按钮：原文与拼音始终显示。 */
+       总览卡没有翻面。没有眼睛按钮：原文与拼音始终显示。
+       没有单卡模式：概览的格子点开是**就地弹窗**，不是把卡片切一张出来。 */
     window.DC_TOOL = {
       title: '三十六计',
       voiceLang: 'zh',
@@ -31,6 +34,7 @@
   <div class="layout-row">
     <div class="main-content">
       <div class="study-top-bar">
+        <div class="seg" id="view-seg"></div>
         <div class="seg" id="lang-seg"></div>
         <span id="study-deck-title" class="study-deck-title"></span>
         <span style="flex:1"></span>
@@ -52,9 +56,8 @@
         <button class="top-btn" id="scroll-bottom-btn" data-tooltip="到最底部">
           <i class="fa-solid fa-arrow-down"></i>
         </button>
-        <button id="card-view-btn" class="top-btn" data-tooltip="单卡模式">
-          <i class="fa-solid fa-grip"></i>
-        </button>
+        <!-- 旧版的「单卡模式」按钮已删（用户 2026-09-29 拍板）：概览 + 弹窗覆盖了
+             同样的需求，少一个顶栏按钮、少一套 .sc-* 版式。 -->
         <div class="skin-toggle-wrap" id="skin-toggle-wrap">
           <button id="style-btn" class="top-btn" data-tooltip="皮肤">
             <i class="fa-solid fa-palette"></i>
@@ -87,6 +90,15 @@
       </div>
     </div>
     <button id="reset-fonts" class="reset-btn">复位</button>
+  </div>
+
+  <!-- 点概览方图的格子 / 行首 → 就地弹窗看那张卡的完整卡面。卡面由 app.js::openStModal()
+       注入，和「列表」视图里那张是同一个 renderCard，只多 .st-modal-root、关闭钮
+       和右下角「在列表中查看」。
+       方图是查阅面：看完关掉人就还在原处，位置感不丢。 -->
+  <div class="st-modal-mask" id="st-modal" hidden>
+    <div class="st-modal-box" id="st-modal-box" role="dialog" aria-modal="true"
+         aria-label="卡片" tabindex="-1"></div>
   </div>
 
   <div id="global-tooltip" class="action-btn-tooltip"></div>

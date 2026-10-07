@@ -2,7 +2,18 @@
    三十六计 · 小工具
    ==========================================================================
    42 张 = 36 条计 + 6 张套别总览（胜战计 / 敌战计 / 攻战计 / 混战计 / 并战计 / 败战计），
-   一次读完，卡片顺序 = 卡组顺序（前 36 张是计，后 6 张是套别总览）。
+   一次读完。顶栏分段控件切两个视图（2026-09-29 改版）：
+
+     chart 概览   6 套 × 6 计 = 6×6 方图。行首 = 套别（读总览卡），格子 = 计。
+                  点格 / 点行首 → **就地弹窗**看那张卡的完整卡面（可翻面、可标记收藏），
+                  关掉还在原位 —— 方图是查阅面，位置感不丢。点格**不朗读**，
+                  朗读交给弹窗里的 🔊（旧版每点一格就读一次，看方图时太吵）。
+     card  列表   一张一张的完整卡。**顺序不是卡组原序**：套别总览是章节导语，
+                  所以排成「总览 → 6 计」× 6 组（卡组里它们本来在最后，读完全部
+                  36 计才知道每套什么意思 —— 那是错的）。
+
+   ✂️ 旧版的「单卡模式」已删（用户 2026-09-29 拍板）：它只是把列表切一张出来，
+      概览 + 弹窗覆盖了同样的需求，还少一个顶栏按钮、少一套 .sc-* 版式。
 
    与"照抄宿主学习视图"那一代比（原模板 26/27 就是那一代，要目录 → 页签 → 每页 100 张）：
      · 一次 getPage(1,500) 读完，没有目录、没有页签、没有侧栏
@@ -27,6 +38,12 @@
   var TOOL = window.DC_TOOL || {};
   var TITLE = TOOL.title || '三十六计';
   var PAGE_SIZE = 500;                    /* 42 张，一次读完 */
+
+  /* 视图：概览方图 / 卡片列表。标签跟着语言走，所以不放进 DC_TOOL。 */
+  var VIEWS = [
+    { id: 'chart', label: { zh: '概览', en: 'Overview' } },
+    { id: 'card',  label: { zh: '列表', en: 'List' } }
+  ];
 
   /* 语言：默认取 DC_TOOL.voiceLang，没配就中文 */
   var LANGS = TOOL.langs && TOOL.langs.length ? TOOL.langs : [
@@ -55,7 +72,9 @@
       fav: '收藏', unfav: '取消收藏',
       eggStamp: '通关', eggSub: '第卅六计',
       eggNote: '—— 三十六计，走为上。你已读完最后一计，恭喜通关！',
-      noPlay: '这张卡没有可朗读的内容'
+      noPlay: '这张卡没有可朗读的内容',
+      overviewTip: '总览', close: '关闭（Esc）', jump: '在列表中查看',
+      chartTip: '点开看这一计', empty: '还没有卡片。'
     },
     en: {
       order: function (n) { return 'Stratagem ' + n; },
@@ -66,7 +85,9 @@
       fav: 'Favorite', unfav: 'Unfavorite',
       eggStamp: 'CLEAR', eggSub: 'No.36',
       eggNote: '— The best strategy is to retreat. You have read the 36th and final stratagem. Congratulations!',
-      noPlay: 'Nothing to read on this card'
+      noPlay: 'Nothing to read on this card',
+      overviewTip: 'Overview', close: 'Close (Esc)', jump: 'View in list',
+      chartTip: 'Open this stratagem', empty: 'No cards yet.'
     }
   };
 
@@ -74,14 +95,17 @@
     deckId: (window.cardAPI || {}).deckId,
     userId: (window.cardAPI || {}).userId,
     all: [],
-    singleCardMode: false,
-    singleCardIndex: 0,
+    view: 'chart',
     skin: 'cream',
     fontSize: 1,
     lang: DEFAULT_LANG,
-    flipped: {},                 /* cardId -> true，切语言/重渲染都要留住 */
+    flipped: {},                 /* cardId -> true，切语言/换视图都要留住 */
     trackLang: {}
   };
+  try {
+    var savedView = localStorage.getItem('dc-st-view');
+    if (savedView && VIEWS.some(function (v) { return v.id === savedView; })) state.view = savedView;
+  } catch (e) {}
   try {
     var savedSkin = localStorage.getItem('dc-st-skin');
     if (savedSkin) state.skin = savedSkin;
@@ -183,15 +207,56 @@
       }
     },
     _primary: function (tag) { return String(tag || '').split('-')[0].toLowerCase(); },
+    /* 「变声玩具」判据：同一个基名被注册到 ≥2 个主语言下。
+       macOS 把 Eddy / Grandma / Sandy … 这 8 个 novelty 角色铺到 10 个语言，
+       实测它们在 zh / ja / ko 下共用同一段基础语音、只换变调：
+         zh — 16 个音色只有 3 种字节长度，彼此包络相关 0.82–0.99，与真音色负相关 −0.26
+         ja — 8 个音色字节数完全相同（185064）
+         ko — 8 个音色 194538–194550
+       真音色（Tingting / Meijia / Kyoko / Yuna …）只在单一语言下注册，不会误伤。
+       只在 _toyHideLangs 里实测过的语系生效：英文的 novelty 是 coca20000 的现役
+       音色，未实测，不动。 */
+    _voiceBase: function (name) { return String(name || '').replace(/\s*\(.*\)\s*$/, '').trim(); },
+    _toyHideLangs: ['zh', 'ja', 'ko'],
+    toySet: function () {
+      if (this._toyCache && this._toyFor === this.voices) return this._toyCache;
+      var langsOf = {}, self = this;
+      (this.voices || []).forEach(function (v) {
+        var b = self._voiceBase(v.name);
+        if (!langsOf[b]) langsOf[b] = {};
+        langsOf[b][self._primary(v.lang)] = 1;
+      });
+      var set = {};
+      Object.keys(langsOf).forEach(function (b) {
+        if (Object.keys(langsOf[b]).length >= 2) set[b] = 1;
+      });
+      this._toyCache = set;
+      this._toyFor = this.voices;
+      return set;
+    },
+    isToy: function (v) {
+      if (this._toyHideLangs.indexOf(this._primary(v.lang)) < 0) return false;
+      return !!this.toySet()[this._voiceBase(v.name)];
+    },
     pickVoice: function (tag) {
       if (!tag) return null;
       var primary = this._primary(tag);
       var saved = null;
       try { saved = localStorage.getItem('dc-voice-' + primary); } catch (e) {}
+      /* 用户显式选过就用它（音色可能已被系统删掉 ⇒ 忽略、继续往下挑）。
+         必须放在循环外：塞进循环里的话「精确 lang 命中」会先 return，
+         而中文音色表第一个就是 zh-CN，用户每次改音色都会被它抢先。 */
+      if (saved) {
+        for (var j = 0; j < this.voices.length; j++) {
+          /* 玩具音色（见 isToy）不算用户的有效选择：中文下默认要落到 Tingting，
+             而不是音色表第一个 zh-CN 的 Eddy */
+          if (this.voices[j].voiceURI === saved && !this.isToy(this.voices[j])) return this.voices[j];
+        }
+      }
       var fallback = null;
       for (var i = 0; i < this.voices.length; i++) {
         var v = this.voices[i];
-        if (saved && v.voiceURI === saved) return v;
+        if (this.isToy(v)) continue;   /* 玩具不参与自动挑选 */
         if (!fallback && this._primary(v.lang) === primary) fallback = v;
         if (v.lang && v.lang.toLowerCase() === String(tag).toLowerCase()) return v;
       }
@@ -223,6 +288,9 @@
     var tag = cur().voice;
     var lang = voiceMgr._primary(tag);
     var voices = voiceMgr.voices.filter(function (v) { return voiceMgr._primary(v.lang) === lang; });
+    /* 隐藏「变声玩具」音色；若该语言下全是玩具（理论上不会）就退回完整列表，免得下拉空掉 */
+    var realVoices = voices.filter(function (v) { return !voiceMgr.isToy(v); });
+    if (realVoices.length) voices = realVoices;
     var pick = voiceMgr.pickVoice(tag);
     var activeUri = pick ? pick.voiceURI : null;
 
@@ -280,6 +348,7 @@
     h.lang = state.lang === 'en' ? 'en' : 'zh-CN';
     try { localStorage.setItem('dc-st-lang', state.lang); } catch (e) {}
     renderLangSeg();
+    renderViewSeg();
     var lbl = $id('voice-lang-label');
     if (lbl) lbl.textContent = cur().label;
   }
@@ -302,9 +371,38 @@
     var top = sc ? sc.scrollTop : 0;
     renderList();
     if (sc) sc.scrollTop = top;
+    /* 弹窗开着的话里面那张也要换语言（原地替换，不关窗） */
+    if (stModalOpen() && modalCardId) {
+      var c = findCard(modalCardId);
+      if (c) patchStModal(c);
+    }
   }
 
-  /* ===== 数据 ===== */
+  /* ===== 视图 ===== */
+  function renderViewSeg() {
+    var box = $id('view-seg');
+    if (!box) return;
+    box.innerHTML = VIEWS.map(function (v) {
+      return '<button type="button" data-view="' + v.id + '"' + (state.view === v.id ? ' class="on"' : '') + '>' +
+        esc(v.label[state.lang] || v.label.zh) + '</button>';
+    }).join('');
+  }
+  function setView(id) {
+    if (!VIEWS.some(function (v) { return v.id === id; })) return;
+    closeStModal();
+    if (state.view === id) return;
+    state.view = id;
+    try { localStorage.setItem('dc-st-view', id); } catch (e) {}
+    renderViewSeg();
+    renderList();
+    updateStatsText();
+    var s = $id('study-scroll');
+    if (s) s.scrollTop = 0;
+  }
+
+  /* ==========================================================================
+     数据
+     ========================================================================== */
   function setIndexOf(card) {
     var d = card.data || {};
     if (d.setIndex >= 1 && d.setIndex <= 6) return d.setIndex;
@@ -316,7 +414,6 @@
     if (!window.cardAPI || !cardAPI.getPage) return Promise.resolve();
     return cardAPI.getPage(1, PAGE_SIZE).then(function (d) {
       state.all = (d.cards || []).slice();
-      /* 每张卡的语言版本各用各的音色 */
       state.all.forEach(function (c) {
         if (!state.trackLang[c.id]) state.trackLang[c.id] = {};
       });
@@ -333,12 +430,43 @@
     if (el) el.textContent = marked + ' / ' + cards.length;
   }
 
+  /* 按套分组：{setIndex, setCard, overview, items[]}。setCard = 拿来取套名的卡
+     （优先总览卡，没有总览卡就退回该套第一张计卡 —— 套名两张卡上都有）。 */
+  function groups() {
+    var bySet = {};
+    state.all.forEach(function (c) {
+      var si = setIndexOf(c);
+      if (!bySet[si]) bySet[si] = { setIndex: si, overview: null, items: [] };
+      if (isOverview(c)) bySet[si].overview = c;
+      else bySet[si].items.push(c);
+    });
+    return Object.keys(bySet).map(Number).sort(function (a, b) { return a - b; })
+      .map(function (k) {
+        var g = bySet[k];
+        g.items.sort(function (a, b) { return ((a.data || {}).order || 0) - ((b.data || {}).order || 0); });
+        g.setCard = g.overview || g.items[0] || null;
+        return g;
+      });
+  }
+
+  /* 列表顺序：每套的导语在前，然后 6 张计。卡组原序是「36 计在前、6 张总览在最后」，
+     读完全部 36 计才知道每套什么意思 —— 导语就该在章节开头。 */
+  function orderedCards() {
+    var out = [];
+    groups().forEach(function (g) {
+      if (g.overview) out.push(g.overview);
+      out = out.concat(g.items);
+    });
+    return out;
+  }
+
   /* ==========================================================================
      卡面
      ========================================================================== */
-  /* 4 个槽位固定：总览卡没有翻面，但**不留空槽** —— 动作栏是右对齐的，
-     右边缘钉死，少一个按钮只会让左边缘回缩，收藏/标记的位置不受影响。 */
-  function actsHtml(card, hasFlip) {
+  /* 动作槽位：计卡 4 个（朗读/翻面/标记/收藏），总览卡 3 个（没有翻面），
+     弹窗里再多 1 个关闭。**不留空槽** —— 动作栏是右对齐的，右边缘钉死，
+     少一个按钮只会让左边缘回缩，标记/收藏的位置不受影响。 */
+  function actsHtml(card, hasFlip, withClose) {
     var t = tt();
     var markOn = card.is_unknown === 1;
     var favOn = card.is_favorite === 1;
@@ -351,10 +479,19 @@
         esc(markOn ? t.unmark : t.mark) + '"><i class="' + (markOn ? 'fa-solid' : 'fa-regular') + ' fa-star"></i></button>' +
       '<button type="button" class="act-fav' + (favOn ? ' is-active' : '') + '" data-action="favorite" data-tooltip="' +
         esc(favOn ? t.unfav : t.fav) + '"><i class="' + (favOn ? 'fa-solid' : 'fa-regular') + ' fa-bookmark"></i></button>' +
+      /* 弹窗里多一个关闭钮（继承 .st-acts button 的尺寸与 hover，只加一条左分隔线） */
+      (withClose ? '<button type="button" class="st-modal-close" data-action="close" data-tooltip="' + esc(t.close) +
+        '"><i class="fa-solid fa-xmark"></i></button>' : '') +
       '</div>';
   }
 
-  function renderOverview(card, d) {
+  /* 弹窗右下角留一条走回列表的老路（概览默认不跳列表，但产品上这条路还要有） */
+  function modalFootHtml() {
+    return '<div class="st-modal-foot"><button type="button" class="st-modal-jump" data-act="modal-jump">' +
+      '<i class="fa-solid fa-list-ul"></i><span class="st-modal-jump-t">' + esc(tt().jump) + '</span></button></div>';
+  }
+
+  function renderOverview(card, d, inModal) {
     /* 印章：中文套名是三个字（「胜战计」），44px 印章放得下，直接用。
        英文套名最长 26 字符（"Enemy-Deception Stratagems"），塞进印章会溢成一团乱麻
        —— 原模板（deck 14）就是硬塞的，这里不照抄这个毛病：
@@ -362,16 +499,18 @@
     var seal = isZh()
       ? '<div class="st-seal">' + esc(pick(d, 'set')) + '</div>'
       : '<div class="st-seal">SET<div class="st-seal-sub">' + esc(String(setIndexOf(card))) + '</div></div>';
-    return '<div class="st-root st-overview ' + SET_CLASS[setIndexOf(card) - 1] + '" data-card-id="' + card.id + '">' +
+    return '<div class="st-root st-overview ' + SET_CLASS[setIndexOf(card) - 1] +
+        (inModal ? ' st-modal-root' : '') + '" data-card-id="' + card.id + '">' +
       seal +
       '<div class="st-ov-title">' + esc(pick(d, 'title')) + '</div>' +
       '<div class="st-ov-theme">' + esc(pick(d, 'theme')) + '</div>' +
       '<div class="st-ov-body">' + esc(pick(d, 'body')) + '</div>' +
-      actsHtml(card, false) +
+      actsHtml(card, false, inModal) +
+      (inModal ? modalFootHtml() : '') +
     '</div>';
   }
 
-  function renderStratagem(card, d) {
+  function renderStratagem(card, d, inModal) {
     var t = tt();
     var flipped = state.flipped[card.id] === true;
     var seg = function (key, label) {
@@ -388,7 +527,8 @@
         '<div class="st-egg-note">' + esc(t.eggNote) + '</div>' +
       '</div>') : '';
     return '<div class="st-root st-stratagem ' + SET_CLASS[setIndexOf(card) - 1] +
-        (flipped ? ' flipped' : '') + '" data-card-id="' + card.id + '">' +
+        (flipped ? ' flipped' : '') + (inModal ? ' st-modal-root' : '') +
+        '" data-card-id="' + card.id + '">' +
       '<div class="st-front" data-act="flipface">' +
         '<div class="st-head"><div class="st-order">' + esc(t.order(d.order)) + '</div>' +
           '<div class="st-pill">' + esc(pick(d, 'set')) + '</div></div>' +
@@ -405,13 +545,61 @@
         '<div class="st-hint">' + esc(t.backHint) + '</div>' +
         egg +
       '</div>' +
-      actsHtml(card, true) +
+      actsHtml(card, true, inModal) +
+      (inModal ? modalFootHtml() : '') +
     '</div>';
   }
 
-  function renderCard(card) {
+  function renderCard(card, inModal) {
     var d = card.data || {};
-    return isOverview(card) ? renderOverview(card, d) : renderStratagem(card, d);
+    return isOverview(card) ? renderOverview(card, d, inModal) : renderStratagem(card, d, inModal);
+  }
+
+  /* ==========================================================================
+     概览方图：6 套 × 6 计
+     ==========================================================================
+     · 行 = 套（数据里的 setIndex），列 = 该套的第 1..6 计（数据里的 order）。
+     · 行首可点 ⇒ 弹该套的总览卡；格子可点 ⇒ 弹这张计卡。都是**就地弹窗**，
+       不是下钻（方图是查阅面，位置感不能丢）。
+     · 窄屏不硬挤：.st-c-wrap 横向滚动，格子保底 84px，4 个汉字放得下。
+     配色：--cat 由 .st-setN 给（6 套色），格子底/线走 .st-chart 上的 --st-* 皮肤 token。
+     ========================================================================== */
+  function chartCell(card) {
+    var d = card.data || {};
+    var t = tt();
+    return '<button type="button" class="st-c-cell" data-act="open" data-card-id="' + card.id +
+        '" data-tooltip="' + esc(t.chartTip) + '">' +
+      (card.is_unknown === 1 ? '<span class="st-c-star"><i class="fa-solid fa-star"></i></span>' : '') +
+      (card.is_favorite === 1 ? '<span class="st-c-fav"><i class="fa-solid fa-bookmark"></i></span>' : '') +
+      '<span class="st-c-no">' + esc(String(d.order == null ? '' : d.order)) + '</span>' +
+      '<span class="st-c-nm">' + esc(pick(d, 'name')) + '</span>' +
+    '</button>';
+  }
+
+  function renderChart() {
+    var box = $id('study-list');
+    var gs = groups();
+    if (!gs.length) { box.innerHTML = '<div class="empty-state">' + esc(tt().empty) + '</div>'; return; }
+    var t = tt();
+    var html = '<div class="st-c-wrap"><div class="st-chart">';
+    gs.forEach(function (g) {
+      var sd = (g.setCard && g.setCard.data) || {};
+      var od = (g.overview && g.overview.data) || {};
+      var theme = g.overview ? pick(od, 'theme') : '';
+      html += '<div class="st-c-row ' + SET_CLASS[g.setIndex - 1] + '">';
+      html += '<div class="st-c-rh"' + (g.overview
+          ? ' data-act="open" data-card-id="' + g.overview.id + '" data-tooltip="' + esc(t.overviewTip) + '"'
+          : '') + '>' +
+        '<span class="st-c-set">' + esc(pick(sd, 'set')) + '</span>' +
+        (theme ? '<span class="st-c-theme">' + esc(theme) + '</span>' : '') +
+      '</div>';
+      g.items.forEach(function (c) { html += chartCell(c); });
+      /* 该套不足 6 张也用空位占住列宽，否则整行的列宽会被 .st-c-rh 吃掉 */
+      for (var i = g.items.length; i < 6; i++) html += '<div class="st-c-cell empty"></div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+    box.innerHTML = html;
   }
 
   /* ==========================================================================
@@ -421,97 +609,108 @@
     var box = $id('study-list');
     if (!box) return;
     var content = $('.study-content');
-    if (content) content.classList.toggle('wide', state.singleCardMode);
-    if (state.singleCardMode) { renderSingleCardStage(); return; }
+    var isChart = state.view === 'chart';
+    if (content) content.classList.toggle('chart-wide', isChart);
+    if (isChart) { renderChart(); return; }
 
-    var cards = state.all;
-    if (!cards.length) {
-      box.innerHTML = '<div class="empty-state">还没有卡片。</div>';
-      return;
-    }
-    var html = '';
-    cards.forEach(function (c, i) {
-      html += '<div class="enter" style="animation-delay:' + Math.min(i * 14, 260) + 'ms">' +
+    var cards = orderedCards();
+    if (!cards.length) { box.innerHTML = '<div class="empty-state">' + esc(tt().empty) + '</div>'; return; }
+    box.innerHTML = cards.map(function (c, i) {
+      return '<div class="enter" style="animation-delay:' + Math.min(i * 14, 260) + 'ms">' +
         renderCard(c) + '</div>';
-    });
-    box.innerHTML = html;
+    }).join('');
   }
 
   /* 只重画一张卡（标记/收藏/翻面后）：别整列表重渲染，否则整屏动画重放、滚动也会抖 */
   function patchCard(card) {
+    if (state.view !== 'card') return;
     var el = document.querySelector('#study-list [data-card-id="' + card.id + '"]');
     if (!el) { renderList(); return; }
     var host = el.parentElement;
     if (host && host.classList.contains('enter')) host.innerHTML = renderCard(card);
     else el.outerHTML = renderCard(card);
   }
+  /* 方图里的同一张卡也要跟着变（星标 / 收藏角标） */
+  function patchChartCell(card) {
+    if (state.view !== 'chart') return;
+    var el = document.querySelector('#study-list .st-c-cell[data-card-id="' + card.id + '"]');
+    if (!el) return;
+    var tmp = document.createElement('div');
+    tmp.innerHTML = chartCell(card);
+    el.replaceWith(tmp.firstElementChild);
+  }
+  /* 一处改、三处跟：列表卡、方图格、弹窗里那张 */
+  function refreshCard(card) {
+    patchCard(card);
+    patchChartCell(card);
+    if (stModalOpen()) patchStModal(card);
+  }
 
-  /* ===== 单卡模式（作用域 = 整个卡组，42 张） ===== */
-  function toggleSingleCardMode() {
-    state.singleCardMode = !state.singleCardMode;
-    state.singleCardIndex = 0;
-    var btn = $id('card-view-btn');
-    if (btn) btn.classList.toggle('active', state.singleCardMode);
-    renderList();
+  /* ==========================================================================
+     卡面弹窗（点方图的格子 / 行首）
+     ==========================================================================
+     遮罩 + 居中一张卡，卡面就是列表里那张（同一个 renderCard），只多 .st-modal-root、
+     轨道末尾的关闭钮、右下角「在列表中查看」。
+     滚动放在**遮罩**上（overflow:auto）而不是弹窗盒上，配合 box 的 margin:auto：
+     内容不高时居中、超高时从顶部开始滚。
+     ========================================================================== */
+  var modalCardId = null;
+
+  function stModalOpen() {
+    var m = $id('st-modal');
+    return !!(m && !m.hidden);
   }
-  function exitSingleCardMode() {
-    if (!state.singleCardMode) return;
-    state.singleCardMode = false;
-    var btn = $id('card-view-btn');
-    if (btn) btn.classList.remove('active');
-    renderList();
+  function openStModal(id) {
+    var card = findCard(id);
+    if (!card) return;
+    var mask = $id('st-modal');
+    var box = $id('st-modal-box');
+    if (!mask || !box) return;
+    modalCardId = String(card.id);
+    box.innerHTML = renderCard(card, true);
+    mask.hidden = false;
+    box.scrollTop = 0;
+    document.body.classList.add('st-modal-open');
+    try { box.focus(); } catch (e) {}
   }
-  function renderSingleCardStage() {
-    var box = $id('study-list');
+  function closeStModal() {
+    var mask = $id('st-modal');
+    if (!mask || mask.hidden) return;
+    mask.hidden = true;
+    /* 顺手清掉卡面：留着的话弹窗里那张会一直挂在 DOM 上，
+       外部按 [data-card-id] 计数/取样式时就会多出一份 */
+    var box = $id('st-modal-box');
+    if (box) box.innerHTML = '';
+    modalCardId = null;
+    document.body.classList.remove('st-modal-open');
+  }
+  /* 标记/收藏/翻面后只重画弹窗里这一张，保留滚动位置（内容可能比视口高） */
+  function patchStModal(card) {
+    var box = $id('st-modal-box');
     if (!box) return;
-    var cards = state.all;
-    if (!cards.length) {
-      box.innerHTML = '<div class="empty-state">还没有卡片。</div>';
-      return;
-    }
-    var prevSvg = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"/></svg>';
-    var nextSvg = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
-    var curCard = cards[state.singleCardIndex] || cards[0];
-    box.innerHTML =
-      '<div class="single-card-stage">' +
-        '<div class="sc-main"><div class="sc-card-wrap" id="sc-card-wrap"></div></div>' +
-        '<div class="sc-nav-col">' +
-          '<button class="sc-nav sc-prev" data-sc="prev" data-tooltip="' + (isZh() ? '上一张' : 'Previous') + '" aria-label="prev">' + prevSvg + '</button>' +
-          '<div class="sc-progress"><span id="sc-idx">1</span> / ' + cards.length + '</div>' +
-          '<div class="sc-group" id="sc-group"></div>' +
-          '<button class="sc-nav sc-next" data-sc="next" data-tooltip="' + (isZh() ? '下一张' : 'Next') + '" aria-label="next">' + nextSvg + '</button>' +
-        '</div>' +
-      '</div>';
-    renderSingleCardContent(state.singleCardIndex, false);
-    void curCard;
+    var top = box.scrollTop;
+    box.innerHTML = renderCard(card, true);
+    box.scrollTop = top;
   }
-  function renderSingleCardContent(idx, animate) {
-    var cards = state.all;
-    if (!cards.length) return;
-    if (idx < 0) idx = cards.length - 1;
-    if (idx >= cards.length) idx = 0;
-    state.singleCardIndex = idx;
-    var wrap = $id('sc-card-wrap');
-    if (!wrap) return;
-    wrap.innerHTML = renderCard(cards[idx]);
-    var idxEl = $id('sc-idx');
-    if (idxEl) idxEl.textContent = idx + 1;
-    var gEl = $id('sc-group');
-    if (gEl) {
-      var d = cards[idx].data || {};
-      gEl.textContent = pick(d, 'set') + (isOverview(cards[idx]) ? '' : ' · ' + (isZh() ? '第' + d.order + '计' : 'No.' + d.order));
+
+  /* 「在列表中查看」：切到列表、滚到那张卡、闪一下。 */
+  function jumpToList(id) {
+    closeStModal();
+    if (state.view !== 'card') {
+      state.view = 'card';
+      try { localStorage.setItem('dc-st-view', 'card'); } catch (e) {}
+      renderViewSeg();
+      renderList();
+      updateStatsText();
     }
-    if (animate) {
-      var target = wrap.firstElementChild || wrap;
-      target.classList.remove('sc-anim');
-      void target.offsetWidth;
-      target.classList.add('sc-anim');
-    }
-  }
-  function singleCardNav(delta) {
-    var cards = state.all;
-    if (!cards.length) return;
-    renderSingleCardContent(state.singleCardIndex + delta, true);
+    var el = document.querySelector('#study-list [data-card-id="' + id + '"]');
+    if (!el) return;
+    el.scrollIntoView({ block: 'center' });
+    var target = el.classList.contains('enter') ? el : el;
+    target.classList.remove('st-flash');
+    void target.offsetWidth;
+    target.classList.add('st-flash');
+    setTimeout(function () { target.classList.remove('st-flash'); }, 1400);
   }
 
   /* ==========================================================================
@@ -543,8 +742,7 @@
     cardAPI.mark(card.id, want).then(function (d) {
       card.is_unknown = (d && typeof d.is_unknown !== 'undefined') ? d.is_unknown : want;
       cardAPI.track('word_mark', card.id);
-      if (state.singleCardMode) renderSingleCardContent(state.singleCardIndex, false);
-      else patchCard(card);
+      refreshCard(card);
       updateStatsText();
     });
   }
@@ -553,8 +751,7 @@
     cardAPI.favorite(card.id, want).then(function (d) {
       card.is_favorite = (d && typeof d.is_favorite !== 'undefined') ? d.is_favorite : want;
       cardAPI.track('favorite_toggle', card.id);
-      if (state.singleCardMode) renderSingleCardContent(state.singleCardIndex, false);
-      else patchCard(card);
+      refreshCard(card);
     });
   }
 
@@ -564,7 +761,7 @@
       var target = e.target;
       if (!target || typeof target.closest !== 'function') return;
 
-      /* 动作按钮（先判：它在卡里，点它不能顺带翻面） */
+      /* 动作按钮（先判：它在卡里，点它不能顺带翻面/关窗） */
       var actionBtn = target.closest('[data-action]');
       if (actionBtn) {
         e.stopPropagation();
@@ -577,7 +774,24 @@
           else if (action === 'flip') handleFlip(card, flipEl);
           else if (action === 'mark') handleMark(card);
           else if (action === 'favorite') handleFavorite(card);
+          else if (action === 'close') closeStModal();
         }
+        return;
+      }
+      /* 弹窗：点遮罩空白处关闭 / 「在列表中查看」
+         （必须先判：格子就在遮罩下面，顺序反了会点穿） */
+      if (target.closest('[data-act="modal-jump"]')) {
+        e.stopPropagation();
+        var jumpId = modalCardId;
+        if (jumpId) jumpToList(jumpId);
+        return;
+      }
+      if (target.id === 'st-modal') { closeStModal(); return; }
+      /* 方图格子 / 行首 = 就地弹窗（不下钻） */
+      var cell = target.closest('.st-c-cell[data-act="open"], .st-c-rh[data-act="open"]');
+      if (cell) {
+        e.stopPropagation();
+        openStModal(cell.dataset.cardId);
         return;
       }
       /* 点正面/背面 = 翻面（原模板的提示语就是这么写的） */
@@ -589,8 +803,9 @@
         return;
       }
 
-      if (target.closest('[data-sc="prev"]')) { singleCardNav(-1); return; }
-      if (target.closest('[data-sc="next"]')) { singleCardNav(1); return; }
+      /* 视图分段控件 */
+      var viewBtn = target.closest('#view-seg button[data-view]');
+      if (viewBtn) { e.stopPropagation(); setView(viewBtn.dataset.view); return; }
 
       /* 语言分段控件 */
       var langBtn = target.closest('#lang-seg button[data-lang]');
@@ -666,7 +881,6 @@
         return;
       }
 
-      if (target.closest('#card-view-btn')) { toggleSingleCardMode(); return; }
       if (target.closest('#scroll-top-btn')) { $id('study-scroll').scrollTo({ top: 0, behavior: 'smooth' }); return; }
       if (target.closest('#scroll-bottom-btn')) {
         var s = $id('study-scroll');
@@ -689,13 +903,10 @@
       }
     });
 
-    /* 键盘：单卡模式下 ←/→/空格 翻下一张，Esc 退出 */
+    /* 键盘：弹窗开着时 Esc 关窗（没有单卡模式了，不需要 ←/→ 翻卡） */
     document.addEventListener('keydown', function (e) {
-      if (!state.singleCardMode) return;
-      if (e.key === 'ArrowLeft') { e.preventDefault(); singleCardNav(-1); }
-      else if (e.key === 'ArrowRight') { e.preventDefault(); singleCardNav(1); }
-      else if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); singleCardNav(1); }
-      else if (e.key === 'Escape') { e.preventDefault(); exitSingleCardMode(); }
+      if (!stModalOpen()) return;
+      if (e.key === 'Escape') { e.preventDefault(); closeStModal(); }
     });
   }
 
@@ -712,9 +923,11 @@
     var title = $id('study-deck-title');
     if (title) title.textContent = TITLE;
 
+    renderViewSeg();
     renderList();
 
     loadAll().then(function () {
+      renderViewSeg();
       renderList();
       updateStatsText();
     }).catch(function () {
