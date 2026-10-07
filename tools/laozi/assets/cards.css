@@ -1,0 +1,443 @@
+/* ==========================================================================
+   道德经 · 卡面（.lj-*）
+   ==========================================================================
+   两代卡面的血缘：
+     · 外壳/动作栏/弹窗骨架 —— 抄自 stratagems-36（.st-*）
+     · 卡面本身 —— 全新。三十六计是「正面 → 翻面」两张脸，这本是**单面**：
+       原文始终显示，生僻字在字上标音，少数几章卡底有一行可折叠的注。
+
+   ⚠️ 三条与本项目其它工具一致的铁律：
+     1. 所有尺寸走 calc(Npx * var(--kt))（= --k × 工具字号滑杆）。原模板那代是死 px，
+        滑杆拉不动它。凡字号乘倍率，盒子尺寸必须同倍率。
+     2. 动作按钮**纯图标 + hover 悬浮标签**，动作栏在卡片底部右对齐。
+     3. `--part`（篇色）必须**声明在要被读的那个元素自己身上** ——
+        var() 在声明它的元素上就替换完了，写在祖先上、子元素再读是可以，
+        但「行首取该行的篇色」这种要跟着类名走的，类名和变量得落在一起。
+
+   ★ 本篇与其它工具最大的不同：**ruby（字上标音）**。
+     rt 的字号也吃 --kt，且行高必须按放大后的 rt 预留 —— 否则 150% 字号下
+     带注音的行会上下互压。这里正文 line-height 取 2.05，留得足。
+   ========================================================================== */
+
+/* ===== 1. 篇色（四篇 + 总览） =====
+   低饱和中国传统色：玄 / 赭 / 青 / 缃。
+   道德经要比三十六计素，所以这四个色都压得比较低 —— 它们只作**细色条**和
+   **行首小字**出现，默认皮肤下不铺满格子（铺满是「篇章彩」皮肤的活）。 */
+/* --part-soft 只在「篇章彩」皮肤下被格子读（见第 7 节）。
+   四份淡染的**区分度**比"好看"更要紧：这张图的全部意义就是让人一眼看出
+   16→17 / 37→38 / 59→60 这三处篇界（它们都落在行中间），色差不够就白做了。
+   直接写死色值而不用 color-mix()，是为了不把兼容性赌在 2023 年的浏览器特性上。 */
+.lj-p0 { --part: #6b655c; --part-soft: #efede8; }   /* 总览 · 灰 */
+.lj-p1 { --part: #4a443c; --part-soft: #e7e4dd; }   /* 章句第一 · 玄 */
+.lj-p2 { --part: #9b5b3d; --part-soft: #f5e1d4; }   /* 章句第二 · 赭 */
+.lj-p3 { --part: #3d6a68; --part-soft: #d9eae8; }   /* 章句第三 · 青 */
+.lj-p4 { --part: #9c8339; --part-soft: #f3e8c5; }   /* 章句第四 · 缃 */
+html.skin-glass .lj-p0 { --part: #a49c8c; }
+html.skin-glass .lj-p1 { --part: #b3aa9c; }
+html.skin-glass .lj-p2 { --part: #d0896a; }
+html.skin-glass .lj-p3 { --part: #7bb3b0; }
+html.skin-glass .lj-p4 { --part: #cbb268; }
+
+/* ===== 2. 卡面的皮肤 token（默认 = 宣纸） =====
+   ⚠️ 同时挂在 `.lj-root`（卡面）和 `.lj-chart`（章图）上：章图不是卡片，
+      但要用同一套纸色 / 墨色 / 描边色，声明一份两处共用。
+      —— 章图格子上的 `--part` 由 `.lj-c-row.lj-pN` 给（见第 7 节）。 */
+.lj-root, .lj-chart {
+    --lj-bg: #fffdf8;
+    --lj-ink: #2e2a26;
+    --lj-line: #ddd5c4;
+    --lj-accent: #8a6a45;
+    --lj-soft: rgba(122, 92, 62, .06);
+    --lj-quiet: #7a7266;
+    --lj-hint: #a49c8c;
+    --lj-pill-fg: #fbf8f2;
+    --lj-act-bg: #f8f5ed;
+    --lj-note-bg: #f8f5ed;
+}
+html.skin-glass .lj-root, html.skin-glass .lj-chart {
+    --lj-bg: #211f1d;
+    --lj-ink: #ece7dd;
+    --lj-line: rgba(255, 255, 255, .20);
+    --lj-accent: #cbb28a;
+    --lj-soft: rgba(203, 178, 138, .12);
+    --lj-quiet: #b3aa9c;
+    --lj-hint: #8d8578;
+    --lj-pill-fg: #211f1d;
+    --lj-act-bg: rgba(255, 255, 255, .07);
+    --lj-note-bg: rgba(255, 255, 255, .05);
+}
+/* 篇章彩：篇色就是主色。--part 声明在 .lj-root 上（.lj-pN），
+   所以读它的规则也必须落在 .lj-root 自己身上。 */
+html.skin-category .lj-root {
+    border-color: var(--part);
+    border-left-width: 4px;
+    --lj-accent: var(--part);
+    --lj-soft: transparent;
+}
+
+/* ===== 3. 卡本体 ===== */
+.lj-root {
+    position: relative;
+    font-family: Georgia, "Songti SC", "STSong", "Noto Serif SC", "Times New Roman", serif;
+    background: var(--lj-bg);
+    color: var(--lj-ink);
+    border: 1px solid var(--lj-line);
+    border-radius: calc(10px * var(--kt));
+    padding: calc(18px * var(--kt));
+    box-shadow: inset 0 0 0 1px rgba(122, 92, 62, .06);
+}
+html.skin-glass .lj-root { backdrop-filter: blur(14px) saturate(140%); }
+
+/* ===== 4. 章卡 =====
+   从上到下四层：定位行 / 原文 / 注（可选） / 动作栏。
+   定位行左 = 「章句第一 · 第 1 章」，右 = 河上公二字章题（记忆钩子，不是标题装饰）。 */
+.lj-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: calc(10px * var(--kt));
+    padding-bottom: calc(10px * var(--kt));
+    border-bottom: 1px solid var(--lj-line);
+}
+.lj-pos {
+    font-size: calc(12.5px * var(--kt));
+    color: var(--lj-quiet);
+    letter-spacing: .5px;
+    flex: 0 0 auto;
+}
+.lj-river {
+    font-size: calc(16px * var(--kt));
+    font-weight: 700;
+    color: var(--part);
+    letter-spacing: calc(2px * var(--kt));
+    flex: 0 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+}
+html.skin-category .lj-river { color: var(--part); }
+
+/* 原文：整章上卡面。一章平均 60 余字，最长约 200 字。
+   ★ pre-wrap + 数据里按句末标点插的换行 = 「一句一行」，古籍的排法。
+     line-height 2.05 是给 ruby 留的位置（见文件头注释第 3 条）。 */
+.lj-body {
+    margin-top: calc(14px * var(--kt));
+    font-size: calc(23px * var(--kt));
+    line-height: 2.05;
+    letter-spacing: calc(.5px * var(--kt));
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+/* 加粗锚点：每章恰好 1 句。
+   <b> 默认 700 字重。中文衬线在 macOS 上是切宋体-Bold（够明显），
+   在 Windows / 安卓可能是合成加粗（偏弱）—— 所以下面加一层极淡的底兜底。
+   ⚠️ 底要用 box-decoration-break: clone，否则跨行时只有首尾两段有底色。 */
+.lj-key {
+    font-weight: 700;
+    background: rgba(156, 91, 61, .09);
+    border-radius: 3px;
+    padding: 0 2px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+}
+html.skin-glass .lj-key { background: rgba(208, 137, 106, .18); }
+
+/* 内联 ruby：只标生僻字，常见字不标（全标会像小学课本）。
+   ⚠️ rt 字号也吃 --kt —— 滑杆拉到 150% 时 rt 必须跟着长，否则拼音会小到看不见。 */
+.lj-body ruby { ruby-position: over; -webkit-ruby-position: before; }
+.lj-body rt {
+    font-size: calc(10.5px * var(--kt));
+    font-family: 'Inter', -apple-system, "PingFang SC", sans-serif;
+    font-weight: 400;
+    color: var(--lj-quiet);
+    letter-spacing: 0;
+    font-style: normal;
+    line-height: 1;
+}
+html.skin-glass .lj-body rt { color: var(--lj-hint); }
+
+/* ===== 5. 卡底的折叠注（≈30 章有，其余 55 章没有这一行）
+   点开**不自动收起** —— 注是给人读的，5 秒太短（exam-vocab 那边是 5 秒自动收，
+   这里有意不同）。展开状态挂 state.noteOpen，标记/收藏重渲染时不丢。 */
+.lj-note {
+    margin-top: calc(14px * var(--kt));
+    padding-top: calc(10px * var(--kt));
+    border-top: 1px dashed var(--lj-line);
+}
+.lj-note-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(6px * var(--kt));
+    border: 0;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+    font-family: 'Inter', -apple-system, "PingFang SC", sans-serif;
+    font-size: calc(12.5px * var(--kt));
+    color: var(--lj-accent);
+    text-align: left;
+    transition: opacity .15s;
+}
+.lj-note-btn:hover { opacity: .75; }
+.lj-note-tri {
+    font-size: calc(9px * var(--kt));
+    line-height: 1;
+    transition: transform .18s;
+    display: inline-block;
+}
+.lj-note.open .lj-note-tri { transform: rotate(90deg); }
+.lj-note-title { font-weight: 700; letter-spacing: .5px; }
+.lj-note-body {
+    margin-top: calc(8px * var(--kt));
+    padding: calc(10px * var(--kt)) calc(12px * var(--kt));
+    background: var(--lj-note-bg);
+    border-left: 2px solid var(--lj-accent);
+    border-radius: 0 calc(6px * var(--kt)) calc(6px * var(--kt)) 0;
+    font-family: 'Inter', -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: calc(14px * var(--kt));
+    line-height: 1.85;
+    color: var(--lj-ink);
+    opacity: .88;
+}
+.lj-note:not(.open) .lj-note-body { display: none; }
+
+/* ===== 6. 篇首卡（总览 + 章句四篇各一张） =====
+   与三十六计的「套别导语卡」同构：一枚方形印记 + 篇名 + 一句话主题 + 正文。 */
+.lj-overview { cursor: default; }
+.lj-ov-seal {
+    position: absolute;
+    top: calc(18px * var(--kt));
+    right: calc(18px * var(--kt));
+    width: calc(46px * var(--kt));
+    height: calc(46px * var(--kt));
+    border: 2px solid var(--part);
+    border-radius: calc(6px * var(--kt));
+    color: var(--part);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(-6deg);
+    font-weight: bold;
+    font-size: calc(15px * var(--kt));
+    line-height: 1.1;
+    letter-spacing: 1px;
+}
+.lj-ov-title {
+    font-size: calc(28px * var(--kt));
+    font-weight: bold;
+    margin: calc(4px * var(--kt)) calc(60px * var(--kt)) calc(6px * var(--kt)) 0;
+    letter-spacing: calc(2px * var(--kt));
+    line-height: 1.25;
+}
+.lj-ov-theme {
+    font-size: calc(13px * var(--kt));
+    color: var(--lj-accent);
+    margin-bottom: calc(12px * var(--kt));
+    letter-spacing: .5px;
+}
+.lj-ov-body { font-size: calc(16.5px * var(--kt)); line-height: 1.95; }
+.lj-ov-body p + p { margin-top: calc(10px * var(--kt)); }
+.lj-overview .lj-acts { margin-top: calc(20px * var(--kt)); }
+
+/* ===== 7. 动作栏（卡片底部、右对齐；纯图标 + 悬浮标签） ===== */
+.lj-acts {
+    display: flex;
+    justify-content: flex-end;
+    gap: 2px;
+    padding: 2px;
+    margin-top: calc(14px * var(--kt));
+    border-radius: calc(12px * var(--kt));
+    background: var(--lj-act-bg);
+    border: 1px solid var(--lj-line);
+    width: fit-content;
+    margin-left: auto;      /* 右对齐 */
+}
+.lj-acts button {
+    width: calc(38px * var(--kt));
+    height: calc(38px * var(--kt));
+    border-radius: calc(10px * var(--kt));
+    border: 0;
+    background: transparent;
+    color: var(--lj-quiet);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(17px * var(--kt));
+    line-height: 1;
+    transition: background .15s, color .15s;
+    touch-action: manipulation;
+}
+.lj-acts button:hover { background: var(--act-hover); color: var(--lj-accent); }
+.lj-acts button:active { transform: scale(.94); }
+.lj-acts button.act-mark.is-active { color: var(--gold); }
+.lj-acts button.act-fav.is-active { color: var(--rose); }
+
+/* ==========================================================================
+   8. 概览章图：9 × 9
+   ==========================================================================
+   81 = 9 × 9，白送的正方形。每行 = 9 章，行首标该行的章号区间。
+
+   ★ 与三十六计那张 6×6 的关键区别：那张的**行首是套别**（行首可点，弹出该套导语）；
+     这张的行首只是章号区间，**没有分组语义** —— 章句四篇在 9 行里切不整齐
+     （第一篇 16 章 ≈ 1.8 行），所以分组靠**颜色**表达：格子顶部 3px 篇色条，
+     三处篇界（16→17 / 37→38 / 59→60）落在**行中间**，颜色一变就是一篇。
+     ⇒ 顶部那 5 张篇首导语单独排一行胶囊，点开弹窗看。
+
+   配色分工：
+     格子骨架（纸底 / 描边 / 圆角）走 .lj-chart 上的 --lj-* 皮肤 token（第 2 节）；
+     篇色 --part 出现在**顶部色条 + 行首小字 + 章题**上。
+   「篇章彩」皮肤下才让 --part-soft 铺满整个格子（四篇成块）。
+   窄屏不硬挤：外层横向滚动，格子保底 82px。
+   ★ 字号全部吃 --kt，盒子尺寸同样乘 --kt，比例不会走形。
+   ========================================================================== */
+.lj-c-wrap { overflow-x: auto; padding-bottom: 4px; }
+.lj-chart {
+    display: flex;
+    flex-direction: column;
+    gap: calc(10px * var(--kt));
+    min-width: 900px;
+    padding: 4px 2px;
+}
+
+/* 章图上方那一条篇首卡胶囊：总览 + 章句四篇。
+   与章图之间的间距由 #study-list 的 gap 给（app.css），这里不再加 margin。 */
+.lj-ov-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(8px * var(--kt));
+}
+.lj-ov-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(6px * var(--kt));
+    padding: calc(6px * var(--kt)) calc(12px * var(--kt));
+    border: 1px solid var(--lj-line);
+    border-left: 3px solid var(--part);
+    border-radius: calc(7px * var(--kt));
+    background: var(--lj-bg);
+    cursor: pointer;
+    transition: transform .12s, box-shadow .12s;
+}
+.lj-ov-chip:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(30, 20, 10, .12); }
+.lj-ov-chip-t {
+    font-family: Georgia, "Songti SC", "STSong", "Noto Serif SC", serif;
+    font-size: calc(14px * var(--kt));
+    font-weight: 700;
+    color: var(--part);
+    letter-spacing: .5px;
+}
+.lj-ov-chip-s {
+    font-size: calc(11px * var(--kt));
+    color: var(--lj-quiet);
+}
+
+.lj-c-row {
+    display: grid;
+    grid-template-columns: 58px repeat(9, minmax(82px, 1fr));
+    gap: calc(7px * var(--kt));
+    align-items: stretch;
+}
+.lj-c-rh {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: calc(4px * var(--kt));
+    font-size: calc(11.5px * var(--kt));
+    font-weight: 700;
+    color: var(--part);
+    letter-spacing: .5px;
+    font-family: 'Inter', -apple-system, "PingFang SC", sans-serif;
+}
+
+.lj-c-cell {
+    position: relative;
+    min-height: calc(64px * var(--kt));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(3px * var(--kt));
+    padding: calc(8px * var(--kt)) calc(4px * var(--kt)) calc(7px * var(--kt));
+    background: var(--lj-bg);
+    border: 1px solid var(--lj-line);
+    border-top: 3px solid var(--part);
+    border-radius: calc(7px * var(--kt));
+    cursor: pointer;
+    transition: transform .12s, box-shadow .12s;
+}
+.lj-c-cell:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(30, 20, 10, .14); }
+html.skin-glass .lj-c-cell:hover { box-shadow: 0 8px 20px rgba(0, 0, 0, .5); }
+.lj-c-cell:active { transform: scale(.98); }
+.lj-c-no {
+    font-size: calc(10px * var(--kt));
+    color: var(--lj-hint);
+    line-height: 1;
+    letter-spacing: .5px;
+    font-family: 'Inter', -apple-system, "PingFang SC", sans-serif;
+}
+.lj-c-nm {
+    font-size: calc(17px * var(--kt));
+    font-weight: 700;
+    letter-spacing: calc(1px * var(--kt));
+    line-height: 1.2;
+    text-align: center;
+    color: var(--lj-ink);
+    font-family: Georgia, "Songti SC", "STSong", "Noto Serif SC", serif;
+}
+/* 标记 / 收藏角标：章图同时兼「进度盘」—— 81 章背到哪儿了，扫一眼就知道 */
+.lj-c-star, .lj-c-fav { position: absolute; top: calc(5px * var(--kt)); font-size: calc(10px * var(--kt)); }
+.lj-c-star { right: calc(5px * var(--kt)); color: var(--gold); }
+.lj-c-fav { right: calc(17px * var(--kt)); color: var(--rose); }
+
+/* 篇章彩：格子按篇淡染 —— 这才是「分类彩」在本卡组上的意义（四色成块） */
+html.skin-category .lj-c-cell { background: var(--part-soft); }
+
+/* ==========================================================================
+   9. 概览弹窗（点章图的格子 / 篇首胶囊）
+   ==========================================================================
+   卡面就是列表里那张（同一个 renderCard），只多 .lj-modal-root、轨道末尾的关闭钮、
+   右下角「在列表中查看」。底盘（遮罩 / 居中 / 滚动）在 app.css 第 5 节。
+   ========================================================================== */
+.lj-modal-root {
+    margin-bottom: 0;
+    box-shadow: 0 12px 36px rgba(46, 36, 20, .26);
+    animation: ljModalIn .24s cubic-bezier(.2, .8, .3, 1) both;
+}
+@keyframes ljModalIn { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+
+/* ⚠️ 弹窗必须是**实底**：glass 皮肤的卡面是半透明的（rgba(255,255,255,.07) +
+   backdrop-filter），前提是浮在扁平的深色页面上；叠到章图上会直接透过去、字全糊。
+   --panel-solid 就是为"要一块实色面板"定的。 */
+html.skin-glass .lj-modal-root {
+    background: var(--panel-solid);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, .55);
+}
+
+/* 关闭钮长在动作轨道末尾：尺寸/hover 全部继承 .lj-acts button，只加一条左分隔线
+   （用 box-shadow 而不是 border-left —— 轨道按钮有 border-radius，画 border 会拐角） */
+.lj-acts button.lj-modal-close { margin-left: 4px; box-shadow: -4px 0 0 -3px var(--lj-line); }
+
+/* 右下角：走回「列表」视图的老路 */
+.lj-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: calc(10px * var(--kt));
+    padding-top: calc(10px * var(--kt));
+    border-top: 1px dashed var(--lj-line);
+}
+.lj-modal-jump {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    font-size: calc(12.5px * var(--kt));
+    color: var(--lj-quiet);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.lj-modal-jump:hover { color: var(--lj-accent); }
+.lj-modal-jump:hover .lj-modal-jump-t { text-decoration: underline; }

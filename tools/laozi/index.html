@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>道德经</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%232e2a26'/><text x='50' y='55' font-size='62' text-anchor='middle' dominant-baseline='central' font-family='Songti SC,serif' fill='%23ece5d8'>道</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="assets/app.css">
+  <link rel="stylesheet" href="assets/cards.css">
+  <script>
+    /* 道德经：86 张 = 八十一章原文 + 5 张篇首导语（1 张总览 + 章句四篇各 1）。
+       顶栏只有一个分段控件：概览 / 列表。
+         · 概览 = 9×9 章图。81 = 9×9 是白送的；真正值钱的是每格能带出
+                   河上公《老子道德经章句》给每章冠的**二字章题**（体道 / 象元 / 玄德…），
+                   所以格子里是「25 象元」而不是光秃秃的「25」—— 每格自带语义。
+         · 列表 = 完整卡片。四篇导语排在各篇开头（不是堆在最后）。
+
+       ★ 卡片是**单面**的：没有翻面。原文就是学习内容本身，始终显示；
+         生僻字在字上标音（内联 ruby），少数几章有背景注，折在卡底一行里点开。
+         —— 与 japanese-gojuon（罗马字始终显示）、exam-vocab（无 flip）同一路。
+         因此动作栏恒为 3 个按钮：朗读 / 标记 / 收藏。
+
+       ★ 没有语言切换：本卡组只有中文。不做白话、不做英译（用户 2026-09-30 拍板），
+         只帮人记住，不替人理解。 */
+    window.DC_TOOL = {
+      title: '道德经',
+      voiceLang: 'zh'
+    };
+  </script>
+</head>
+<body>
+  <div class="layout-row">
+    <div class="main-content">
+      <div class="study-top-bar">
+        <div class="seg" id="view-seg"></div>
+        <span id="study-deck-title" class="study-deck-title"></span>
+        <span style="flex:1"></span>
+        <button id="font-settings-btn" class="top-btn" data-tooltip="字号">
+          <i class="fa-solid fa-font"></i>
+        </button>
+        <div class="control-group">
+          <button class="top-btn voice-select-btn" data-tooltip="朗读音色">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+          <div class="voice-dropdown" style="display:none;">
+            <div class="voice-dropdown-header">选择音色</div>
+            <div class="voice-list"></div>
+          </div>
+        </div>
+        <button class="top-btn" id="scroll-top-btn" data-tooltip="回到顶部">
+          <i class="fa-solid fa-arrow-up"></i>
+        </button>
+        <button class="top-btn" id="scroll-bottom-btn" data-tooltip="到最底部">
+          <i class="fa-solid fa-arrow-down"></i>
+        </button>
+        <div class="skin-toggle-wrap" id="skin-toggle-wrap">
+          <button id="style-btn" class="top-btn" data-tooltip="皮肤">
+            <i class="fa-solid fa-palette"></i>
+          </button>
+          <div class="skin-dropdown" id="style-dropdown" style="display:none;">
+            <div class="skin-dropdown-header"><i class="fa-solid fa-palette"></i> <span>皮肤</span></div>
+            <div class="skin-list" id="style-list"></div>
+          </div>
+        </div>
+        <button id="refresh-stats" class="stats-text" data-tooltip="刷新">
+          <i class="fa-solid fa-arrows-rotate"></i>
+          <span>0 / 0</span>
+        </button>
+      </div>
+      <div class="study-scroll" id="study-scroll">
+        <div class="study-content">
+          <div id="study-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="font-drawer" class="font-drawer" style="display:none;">
+    <div class="setting-item">
+      <label>字号</label>
+      <div class="control">
+        <button id="font-size-minus">&minus;</button>
+        <span id="font-size-value" class="value">100%</span>
+        <button id="font-size-plus">+</button>
+      </div>
+    </div>
+    <button id="reset-fonts" class="reset-btn">复位</button>
+  </div>
+
+  <!-- 点章图的格子 / 行首 → 就地弹窗看那一章的完整卡面。卡面由 app.js::openLjModal()
+       注入，和「列表」视图里那张是同一个 renderCard，只多 .lj-modal-root、关闭钮
+       和右下角「在列表中查看」。
+       章图是查阅面：看完关掉人就还在原处，位置感不丢。 -->
+  <div class="lj-modal-mask" id="lj-modal" hidden>
+    <div class="lj-modal-box" id="lj-modal-box" role="dialog" aria-modal="true"
+         aria-label="卡片" tabindex="-1"></div>
+  </div>
+
+  <div id="global-tooltip" class="action-btn-tooltip"></div>
+  <div id="toast" class="toast"></div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

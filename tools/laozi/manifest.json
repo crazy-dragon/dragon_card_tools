@@ -1,0 +1,25 @@
+{
+  "name": "道德经",
+  "description": "《道德经》八十一章全文 + 5 张篇首导语（86 张）。两个视图：概览 = 9×9 章图（每格一章，底色分章句四篇，点格或行首就地弹窗看原文），列表 = 完整卡片（四篇导语排在各篇开头）。只给原文、生僻字读音（字上标音）和极少的背景注 —— 不附白话、不带英译。折叠注、朗读、标记 / 收藏、三套皮肤、字号滑杆。",
+  "lang": "zh",
+  "fields": [
+    "type",
+    "chapter",
+    "riverTitle",
+    "part",
+    "text",
+    "hints",
+    "note",
+    "noteTitle",
+    "title",
+    "theme",
+    "body"
+  ],
+  "trackedActions": [
+    "audio_play",
+    "word_mark",
+    "favorite_toggle",
+    "note_view"
+  ],
+  "cardsJson": "../memory_market_goods/laozi/cards.json"
+}
