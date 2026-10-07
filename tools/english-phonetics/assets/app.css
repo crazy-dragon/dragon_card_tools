@@ -5,10 +5,10 @@
      · :root token 名与值直接抄本体（含 --study-* 那一组）
      · topbar gap:10px · .top-btn 38×38 透明无边框 · 图标 22px · 标题是胶囊
      · toast / tooltip / 下拉 / 字体抽屉，都是本体那套
-     · .sc-card-wrap 高度恒定 —— 单卡模式切卡不跳高
+     · .study-content.chart-wide —— 一览面（总览视图）加宽到 1160px
    本工具**没有**的：全局侧栏、目录分页、侧栏页签、结课弹窗。原版（ipa-cards /
    phonics-cards）是照抄本体的「目录 → 页签 → 每一页 100 张」，一轮下来要点三次
-   才看到卡；现在是把整组一次读完，顶栏分段切换音标/拼读。
+   才看到卡；现在是把整组一次读完，顶栏两个分段控件：视图（总览 / 卡片）与这一组（音标 / 拼读）。
 
    版面 = P4 档（用户拍板）：
      · 列宽 620px（.study-content 660 − 左右各 20 padding）
@@ -102,7 +102,7 @@ body {
 
 /* ===== 2. 布局：单栏（没有侧栏了） =====
    ⚠️ 外面这一层**不要**跟着卡片列一起收窄：实测 700px 时顶栏那排控件（分段控件 +
-   标题 + 眼睛 + 字体 + 音色 + 上下 + 单卡 + 皮肤 + 统计）会折成两行、顶栏高 101px。
+   视图 + 分组 + 标题 + 眼睛 + 字体 + 音色 + 上下 + 皮肤 + 统计）会折成两行、顶栏高 101px。
    卡片列由下面的 .study-content 单独收（660 − 40 = 620），两者互不影响。 */
 .layout-row {
     display: flex;
@@ -233,16 +233,22 @@ html.skin-glass .study-top-bar { backdrop-filter: blur(18px) saturate(150%); }
     width: 100%;
     max-width: 660px;          /* 660 − 左右各 20 padding = 卡片列 620（P4） */
     margin: 0 auto;
-    flex: 1;
+    /* ⚠️ 必须 `flex: 1 0 auto`，不能写 `flex: 1`：`flex: 1` 展开是 `1 1 0%`，
+       flex-shrink 默认 1 ⇒ 内容比滚动容器高时本元素被压成容器高，而子元素
+       （#study-list，`flex: 1 0 auto`）拒绝压缩 ⇒ 内容整块溢出，这里的
+       padding-bottom 被整个吃掉，滚到底时最后一行紧贴视口底。
+       shrink 改 0 后：内容高时按内容高撑开（24px 下内边距生效），内容矮时
+       flex-grow 仍撑满容器。2026-09-29 实测修复。 */
+    flex: 1 0 auto;
     min-height: 0;
     padding: 24px 20px;
     display: flex;
     flex-direction: column;
 }
-/* 单卡模式：一次只看一张，给它更宽的行（不然左右两条导航会把卡挤到 550px，
-   比列表模式还窄）；JS 在切模式时给 .study-content 挂 .wide。 */
-.study-content.wide { max-width: 900px; }
-/* flex: 1 0 auto —— 短卡组时撑满面板（单卡模式还要靠它垂直居中），但**绝不压缩**。
+/* 总览视图：一览面（音标表 10 列 / 拼读表一堆格子）要比卡片列宽得多 —— 1160px；
+   卡片视图仍是 660 → 620 的卡片列。JS 切视图时给 .study-content 挂 .chart-wide。 */
+.study-content.chart-wide { max-width: 1160px; }
+/* flex: 1 0 auto —— 短卡组时撑满面板，但**绝不压缩**。
    原写法 flex:1 / min-height:0 会把列表压成面板高（实测 837px），里面的
    position:sticky 分组标题只能吸 837px 就被"顶走"（探针在 scrollTop=1400 抓到
    head 跑到 -534）。overflow 是 visible，卡片照样显示，所以肉眼看不出来。 */
@@ -253,59 +259,7 @@ html.skin-glass .study-top-bar { backdrop-filter: blur(18px) saturate(150%); }
     to   { opacity: 1; transform: none; }
 }
 
-/* ===== 5. 单卡模式（作用域 = 当前这一组）」 ===== */
-.single-card-stage {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 18px;
-    flex: 1;
-    min-height: 0;
-}
-.sc-main { flex: 1; min-width: 0; display: flex; justify-content: center; align-items: center; }
-.sc-nav-col { display: flex; flex-direction: column; align-items: center; gap: 14px; flex-shrink: 0; }
-/* 固定、不动的卡盒：**容器**高度恒定（切卡不跳高，本体同款规矩），但里面的卡片
-   不拉伸 —— 按自己的内容高垂直居中，短卡（比如引导卡）不会拖出一大片底色。 */
-.sc-card-wrap {
-    width: 100%;
-    max-width: 620px;          /* 与列表模式同宽，切模式不跳宽 */
-    margin: 0 auto;
-    height: min(760px, calc(100vh - 140px));
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    border-radius: 16px;
-    background: transparent;
-    overflow: hidden;
-}
-.sc-card-wrap > [data-card-id] { flex: 0 1 auto; min-height: 0; overflow-y: auto; margin-bottom: 0; }
-.sc-nav {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    border: 1px solid var(--card-line);
-    background: var(--card-bg);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--ink2);
-    transition: all 0.2s;
-    flex-shrink: 0;
-}
-.sc-nav:hover { color: var(--accent); border-color: var(--accent); transform: translateY(-2px); }
-.sc-nav:active { transform: scale(0.92); }
-.sc-progress { text-align: center; font-size: 13px; color: var(--muted); font-weight: 600; min-width: 20px; }
-.sc-anim { animation: scFlash 0.28s ease; }
-@keyframes scFlash {
-    0% { opacity: 0; transform: translateY(10px) scale(0.97); }
-    60% { opacity: 1; }
-    100% { opacity: 1; transform: none; }
-}
-
-/* ===== 6. 皮肤下拉 ===== */
+/* ===== 5. 皮肤下拉 ===== */
 .skin-toggle-wrap { position: relative; }
 .skin-dropdown {
     position: absolute;
@@ -344,7 +298,7 @@ html.skin-glass .study-top-bar { backdrop-filter: blur(18px) saturate(150%); }
 .skin-option.active { background: var(--act-hover); color: var(--accent); font-weight: 700; }
 .skin-option i { width: 16px; text-align: center; }
 
-/* ===== 7. 音色下拉 ===== */
+/* ===== 6. 音色下拉 ===== */
 .control-group { position: relative; }
 .voice-dropdown {
     position: absolute;
@@ -374,7 +328,7 @@ html.skin-glass .study-top-bar { backdrop-filter: blur(18px) saturate(150%); }
 .voice-option:hover { background: var(--act-hover); }
 .voice-option.active { background: var(--act-hover); color: var(--accent); }
 
-/* ===== 8. 字体抽屉 ===== */
+/* ===== 7. 字体抽屉 ===== */
 .font-drawer {
     position: fixed;
     z-index: 200;
@@ -413,7 +367,7 @@ html.skin-glass .study-top-bar { backdrop-filter: blur(18px) saturate(150%); }
     font-weight: 600;
 }
 
-/* ===== 9. Tooltip ===== */
+/* ===== 8. Tooltip ===== */
 #global-tooltip {
     position: fixed;
     padding: 5px 12px;
@@ -433,7 +387,7 @@ html.skin-glass .study-top-bar { backdrop-filter: blur(18px) saturate(150%); }
 }
 #global-tooltip.show { opacity: 1; visibility: visible; }
 
-/* ===== 10. Toast ===== */
+/* ===== 9. Toast ===== */
 .toast {
     position: fixed;
     bottom: 24px;
@@ -457,7 +411,7 @@ html.skin-glass .study-top-bar { backdrop-filter: blur(18px) saturate(150%); }
 .empty-state { text-align: center; color: var(--muted); padding: 60px 20px; font-size: 14px; }
 
 /* ==========================================================================
-   11. 三套皮肤
+   10. 三套皮肤
    --------------------------------------------------------------------------
    只换颜色，一行版式都不动。共用同一份 token：
      --page-bg / --page-bg2   页面渐变两端
@@ -470,7 +424,7 @@ html.skin-glass .study-top-bar { backdrop-filter: blur(18px) saturate(150%); }
      --tag-*  --acts-*  --act-hover  --fml-*  --chip-*  --alt-*  --scroll-*
    ========================================================================== */
 
-/* 11.1 奶油 Cream（默认）：暖白底 + 白卡 + 金标签 + 紫强调 */
+/* 10.1 奶油 Cream（默认）：暖白底 + 白卡 + 金标签 + 紫强调 */
 html, html.skin-cream {
     --page-bg: #f8f7f2;
     --page-bg2: #efece2;
@@ -512,7 +466,7 @@ html, html.skin-cream {
     --scroll-thumb-hover: rgba(93, 78, 46, .32);
 }
 
-/* 11.2 墨玻璃 Ink Glass：深紫底 + 毛玻璃卡 + 金强调 */
+/* 10.2 墨玻璃 Ink Glass：深紫底 + 毛玻璃卡 + 金强调 */
 html.skin-glass {
     --page-bg: #181223;
     --page-bg2: #120c1c;
@@ -560,7 +514,7 @@ html.skin-glass .ipa-root,
 html.skin-glass .ph-root,
 html.skin-glass .dc-intro { box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
 
-/* 11.3 分类彩 Category：类别/章节各一色，卡底跟着淡染（颜色在 cards.css 里，
+/* 10.3 分类彩 Category：类别/章节各一色，卡底跟着淡染（颜色在 cards.css 里，
    因为要读卡片自己的 --cat）。这里只给「不属于任何类别色」的部分定色。 */
 html.skin-category {
     --page-bg: #f4ede4;

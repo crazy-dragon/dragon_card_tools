@@ -12,10 +12,25 @@
   <link rel="stylesheet" href="assets/app.css">
   <link rel="stylesheet" href="assets/cards.css">
   <script>
-    /* 音标与拼读合成一个工具：不再分两个卡组、也不再按 cardHtml/cardJs 模板渲染。
-       卡片数据里的 kind 字段决定它属于哪一组，顶栏分段控件切换只渲染当前这组。 */
+    /* 音标与拼读合成一个工具：不分两个卡组、也不按 cardHtml/cardJs 模板渲染。
+       卡片数据里的 kind 字段决定它属于哪一组（顶栏第二个分段控件切这组）。
+
+       两个维度的控件各管一件事（顶栏最左两个 seg）：
+         view 图 / 卡片  —— 图 = 一览面（音标表 / 拼读表，点格**就地弹窗**），卡片 = 逐张读
+         kind 音标 / 拼读 —— 上面两种视图都按它分
+
+       点格子为什么是弹窗而不是"跳到那张卡"：一览面是**查阅面**，跳卡片等于换页，
+       看 5 个音就要来回切 5 次、表里的位置感全丢。弹窗关掉就回到原处，
+       弹窗里的卡面就是列表里那一张（同一份数据血缘）。
+
+       单卡模式已退役（有概览面之后它是纯冗余）。 */
     window.DC_TOOL = {
       title: '音标拼读',
+      voiceLang: 'en',
+      views: [
+        { id: 'chart', label: '总览' },
+        { id: 'card',  label: '卡片' }
+      ],
       kinds: [
         { id: 'ipa', label: '音标', count: 48 },
         { id: 'ph', label: '拼读', count: 109 }
@@ -27,7 +42,8 @@
   <div class="layout-row">
     <div class="main-content">
       <div class="study-top-bar">
-        <!-- 音标 / 拼读 分段切换（这个工具的主角，放最左） -->
+        <!-- 总览 / 卡片（视图） + 音标 / 拼读（这一组）两个分段控件 -->
+        <div class="seg" id="view-seg"></div>
         <div class="seg" id="kind-seg"></div>
         <span id="study-deck-title" class="study-deck-title"></span>
         <span style="flex:1"></span>
@@ -52,9 +68,6 @@
         </button>
         <button class="top-btn" id="scroll-bottom-btn" data-tooltip="到最底部">
           <i class="fa-solid fa-arrow-down"></i>
-        </button>
-        <button id="card-view-btn" class="top-btn" data-tooltip="单卡模式">
-          <i class="fa-solid fa-grip"></i>
         </button>
         <div class="skin-toggle-wrap" id="skin-toggle-wrap">
           <button id="style-btn" class="top-btn" data-tooltip="皮肤">

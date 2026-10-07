@@ -291,3 +291,151 @@ html.skin-category .ph-sound { color: var(--cat); }
 html.skin-category .dc-tip { border-left-color: var(--cat); }
 html.skin-category .dc-acts button:hover { background: rgba(255, 255, 255, .85); color: var(--cat); }
 html.skin-category .dc-chip:hover { border-color: color-mix(in srgb, var(--cat) 40%, #fff); }
+
+/* ==========================================================================
+   11. 总览（一览面）—— 音标表 / 拼读表
+   --------------------------------------------------------------------------
+   给**入门**的人看的版式：桌面每行 5 格、格子大、留白足，一眼看得清。
+   字号只跟 --card-font-scale（--ep-fs），**不跟 --k**（--k = 1.45，一览表要的是好认，
+   不跟卡片正文同倍率）。行高 auto —— 格子按内容长，不写死高度。
+   格子上的分类色走行内 --cat（JS 从 IPA_CAT / PH_SEC 取，和卡片同一个色系），
+   深浅由这里的 color-mix 决定；文字一律用 --card-ink / --muted，玻璃皮肤下自动变浅。
+
+   音标表的排法：元音在前（单元音 / 双元音），辅音在后 —— 辅音**清浊成对相邻**
+   （p b / t d / k ɡ …），一对两格，口型相同、只差声带振不振动；格子里直接写着
+   类别名（清辅音 / 浊辅音 / 鼻音 / 半辅音），不必靠记颜色。
+   ========================================================================== */
+.ep-chart { --ep-fs: var(--card-font-scale, 1); display: flex; flex-direction: column; }
+
+.ep-lead {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: calc(4px * var(--ep-fs)) calc(10px * var(--ep-fs));
+    margin-bottom: calc(16px * var(--ep-fs));
+    padding: calc(10px * var(--ep-fs)) calc(14px * var(--ep-fs));
+    border-radius: 12px;
+    background: var(--seg-bg);
+    border: 1px solid var(--seg-line);
+    font-size: calc(12.5px * var(--ep-fs));
+    line-height: 1.55;
+    color: var(--ink2);
+}
+.ep-lead i { color: var(--accent); font-size: calc(12px * var(--ep-fs)); }
+.ep-lead b { color: var(--card-ink); font-weight: 800; }
+
+.ep-sect + .ep-sect { margin-top: calc(24px * var(--ep-fs)); }
+.ep-sect-h {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: calc(8px * var(--ep-fs));
+    margin-bottom: calc(9px * var(--ep-fs));
+    font-size: calc(13.5px * var(--ep-fs));
+    font-weight: 800;
+    color: var(--card-ink);
+}
+.ep-sect-h .n { font-size: calc(11px * var(--ep-fs)); font-weight: 700; color: var(--muted); }
+.ep-sect-h .hint {
+    font-size: calc(11px * var(--ep-fs));
+    font-weight: 600;
+    color: var(--muted);
+    padding-left: calc(8px * var(--ep-fs));
+    border-left: 1px solid var(--card-line);
+}
+html.eye-off .ep-sect-h .hint.en { display: none; }
+
+/* 大格一览：桌面每行 5 格；窄屏依次 4 / 3 / 2（见文件末尾的媒体查询）。
+   align-items: stretch —— 同一行的格子等高，「高度自动调整」由内容决定。 */
+.ep-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: calc(10px * var(--ep-fs));
+    align-items: stretch;
+}
+
+/* 子块标题：单元音 / 双元音 / 清浊成对 / 鼻音·半辅音 */
+.ep-sub {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: calc(8px * var(--ep-fs));
+    margin: calc(16px * var(--ep-fs)) 0 calc(9px * var(--ep-fs));
+    font-size: calc(12.5px * var(--ep-fs));
+    font-weight: 800;
+    color: var(--card-ink);
+}
+.ep-sub .n { font-size: calc(11px * var(--ep-fs)); font-weight: 700; color: var(--muted); }
+.ep-sub .hint {
+    font-size: calc(11px * var(--ep-fs));
+    font-weight: 600;
+    color: var(--muted);
+    padding-left: calc(8px * var(--ep-fs));
+    border-left: 1px solid var(--card-line);
+}
+
+.ep-cell {
+    position: relative;
+    min-height: calc(84px * var(--ep-fs));
+    padding: calc(9px * var(--ep-fs)) calc(8px * var(--ep-fs));
+    border-radius: calc(12px * var(--ep-fs));
+    border: 1px solid color-mix(in srgb, var(--cat) 55%, #fff);
+    background: color-mix(in srgb, var(--cat) 13%, #fff);
+    color: var(--card-ink);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(4px * var(--ep-fs));
+    overflow: hidden;
+    transition: transform .13s ease, box-shadow .13s ease, background .13s ease;
+    touch-action: manipulation;
+}
+.ep-ipa .s { font-size: calc(27px * var(--ep-fs)); font-weight: 800; line-height: 1.05; letter-spacing: -.4px; }
+.ep-cell .c { font-size: calc(10.5px * var(--ep-fs)); font-weight: 700; line-height: 1; color: var(--muted); }
+/* 拼读格：拼写大、读音小。这两档**比音标那档更需要放大** ——
+   音标格只有一个符号（27px 已经够满），拼读格是「拼写 + 读音」两行拉丁字母，
+   同一个 27px 下拉丁字母的视觉重量远小于 IPA 符号，17px 看着就偏小。
+   放大后长条 pattern（「开音节 + magic e」「双音节动词重读尾」）会自己折行，
+   格子按 min-height 起、随内容长高（行高 auto），不会挤。 */
+.ep-ph .p { font-size: calc(24px * var(--ep-fs)); font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+.ep-ph .s { font-size: calc(15px * var(--ep-fs)); font-weight: 700; line-height: 1.15; color: var(--muted); }
+.ep-cell:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(0, 0, 0, .15); z-index: 2; }
+.ep-cell:active { transform: scale(.95); }
+/* 点一下就在放音：外圈亮一道，给个即时反馈（clipPlayer 挂 .playing，毫秒后摘掉） */
+.ep-cell.playing { box-shadow: 0 0 0 calc(3px * var(--ep-fs)) var(--accent); }
+.ep-cell .mk { position: absolute; font-size: calc(9px * var(--ep-fs)); line-height: 1; }
+.ep-cell .mk.star { top: calc(3px * var(--ep-fs)); left: calc(5px * var(--ep-fs)); color: var(--unknown); }
+.ep-cell .mk.fav  { top: calc(3px * var(--ep-fs)); right: calc(5px * var(--ep-fs)); color: var(--accent); }
+.ep-cell.is-marked { box-shadow: inset 0 0 0 calc(2px * var(--ep-fs)) color-mix(in srgb, var(--cat) 72%, #000); }
+html.skin-glass .ep-cell {
+    background: color-mix(in srgb, var(--cat) 26%, #241b33);
+    border-color: color-mix(in srgb, var(--cat) 44%, #241b33);
+}
+@supports not (background: color-mix(in srgb, red 10%, white)) {
+    .ep-cell { background: #eef2f7; border-color: #dfe3e9; }
+}
+
+.ep-note {
+    margin-top: calc(22px * var(--ep-fs));
+    font-size: calc(11.5px * var(--ep-fs));
+    line-height: 1.6;
+    color: var(--muted);
+    text-align: center;
+}
+
+/* 每行**恒为 5 格**，窄屏不降列 —— 降成 4 / 3 列会把「每两格一对」的清浊对
+   断到两行去（一行 5 格是奇数，辅音就是按 2 对 + 1 单音凑的这个数）。
+   窄屏要的是别挤，所以这里只收紧间距 / 内边距 / 字号。 */
+@media (max-width: 900px) {
+    .ep-grid { gap: calc(8px * var(--ep-fs)); }
+}
+@media (max-width: 620px) {
+    .ep-grid { gap: calc(6px * var(--ep-fs)); }
+    .ep-cell { min-height: calc(68px * var(--ep-fs)); padding: calc(6px * var(--ep-fs)) calc(4px * var(--ep-fs)); }
+    .ep-ipa .s { font-size: calc(21px * var(--ep-fs)); }
+    .ep-ph .p { font-size: calc(19px * var(--ep-fs)); }
+    .ep-ph .s { font-size: calc(13px * var(--ep-fs)); }
+    .ep-cell .c { font-size: calc(9.5px * var(--ep-fs)); }
+}

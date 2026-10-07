@@ -10,7 +10,10 @@
 
    跟原版（复刻宿主：侧栏 → 目录分页 → 页签 → 每页 100 张）比，这一版：
      · 一次把整组读完（getPage(1, 500)），没有目录、没有页签、没有侧栏
-     · 顶栏最左是「音标 / 拼读」分段控件，右边多一个「眼睛」控制卡面英文（默认关）
+     · 顶栏最左两个分段控件：**视图**（总览 / 卡片）+ **这一组**（音标 / 拼读）
+     · 「总览」= 大格一览面（每行 5 格、格子大、留白足），**点一下直接发音**；
+       「卡片」= 逐张读（要看要领 / 例词 / 常见拼写就切过去）；单卡模式已退役
+     · 右边多一个「眼睛」控制卡面英文（默认关）
      · 三套皮肤（奶油 / 墨玻璃 / 分类彩）
      · 卡面 = P4 版面：列宽 620、文字 ×1.45、按钮钉右上角、例词与音标同排
 
@@ -25,6 +28,10 @@
 
   var TOOL = window.DC_TOOL || {};
   var TITLE = TOOL.title || '音标拼读';
+  var VIEWS = (TOOL.views && TOOL.views.length) ? TOOL.views : [
+    { id: 'chart', label: '总览' },
+    { id: 'card',  label: '卡片' }
+  ];
   var KINDS = (TOOL.kinds && TOOL.kinds.length) ? TOOL.kinds : [
     { id: 'ipa', label: '音标', count: 48 },
     { id: 'ph', label: '拼读', count: 109 }
@@ -42,14 +49,17 @@
     deckId: (window.cardAPI || {}).deckId,
     userId: (window.cardAPI || {}).userId,
     all: [],                  /* 全部卡：[{id, data, is_unknown, is_favorite, _kind}] */
+    view: 'chart',            /* chart = 总览（一览面） / card = 卡片（逐张读） */
     kind: 'ipa',
     eye: false,               /* false = 关掉英文（默认） */
-    singleCardMode: false,
-    singleCardIndex: 0,
     skin: 'cream',
     fontSize: 1,
     soundEnabled: true
   };
+  try {
+    var savedView = localStorage.getItem('dc-phonetics-view');
+    if (savedView && VIEWS.some(function (v) { return v.id === savedView; })) state.view = savedView;
+  } catch (e) {}
   try { if (localStorage.getItem('dc-phonetics-kind') === 'ph') state.kind = 'ph'; } catch (e) {}
   try { state.eye = localStorage.getItem('dc-phonetics-eye') === '1'; } catch (e) {}
   try {
@@ -222,15 +232,56 @@
       }
     },
     _primary: function (tag) { return String(tag || '').split('-')[0].toLowerCase(); },
+    /* 「变声玩具」判据：同一个基名被注册到 ≥2 个主语言下。
+       macOS 把 Eddy / Grandma / Sandy … 这 8 个 novelty 角色铺到 10 个语言，
+       实测它们在 zh / ja / ko 下共用同一段基础语音、只换变调：
+         zh — 16 个音色只有 3 种字节长度，彼此包络相关 0.82–0.99，与真音色负相关 −0.26
+         ja — 8 个音色字节数完全相同（185064）
+         ko — 8 个音色 194538–194550
+       真音色（Tingting / Meijia / Kyoko / Yuna …）只在单一语言下注册，不会误伤。
+       只在 _toyHideLangs 里实测过的语系生效：英文的 novelty 是 coca20000 的现役
+       音色，未实测，不动。 */
+    _voiceBase: function (name) { return String(name || '').replace(/\s*\(.*\)\s*$/, '').trim(); },
+    _toyHideLangs: ['zh', 'ja', 'ko'],
+    toySet: function () {
+      if (this._toyCache && this._toyFor === this.voices) return this._toyCache;
+      var langsOf = {}, self = this;
+      (this.voices || []).forEach(function (v) {
+        var b = self._voiceBase(v.name);
+        if (!langsOf[b]) langsOf[b] = {};
+        langsOf[b][self._primary(v.lang)] = 1;
+      });
+      var set = {};
+      Object.keys(langsOf).forEach(function (b) {
+        if (Object.keys(langsOf[b]).length >= 2) set[b] = 1;
+      });
+      this._toyCache = set;
+      this._toyFor = this.voices;
+      return set;
+    },
+    isToy: function (v) {
+      if (this._toyHideLangs.indexOf(this._primary(v.lang)) < 0) return false;
+      return !!this.toySet()[this._voiceBase(v.name)];
+    },
     pickVoice: function (lang) {
       if (!lang) return null;
       var primary = this._primary(lang);
       var saved = null;
       try { saved = localStorage.getItem('dc-voice-' + primary); } catch (e) {}
+      /* 用户显式选过就用它（音色可能已被系统删掉 ⇒ 忽略、继续往下挑）。
+         必须放在循环外：塞进循环里的话「精确 lang 命中」会先 return，
+         而中文音色表第一个就是 zh-CN，用户每次改音色都会被它抢先。 */
+      if (saved) {
+        for (var j = 0; j < this.voices.length; j++) {
+          /* 玩具音色（见 isToy）不算用户的有效选择：中文下默认要落到 Tingting，
+             而不是音色表第一个 zh-CN 的 Eddy */
+          if (this.voices[j].voiceURI === saved && !this.isToy(this.voices[j])) return this.voices[j];
+        }
+      }
       var fallback = null;
       for (var i = 0; i < this.voices.length; i++) {
         var v = this.voices[i];
-        if (saved && v.voiceURI === saved) return v;
+        if (this.isToy(v)) continue;   /* 玩具不参与自动挑选 */
         if (!fallback && this._primary(v.lang) === primary) fallback = v;
         if (v.lang && v.lang.toLowerCase() === String(lang).toLowerCase()) return v;
       }
@@ -261,6 +312,9 @@
     list.innerHTML = '';
     var lang = voiceMgr._currentLang;
     var voices = voiceMgr.voices.filter(function (v) { return voiceMgr._primary(v.lang) === lang; });
+    /* 隐藏「变声玩具」音色；若该语言下全是玩具（理论上不会）就退回完整列表，免得下拉空掉 */
+    var realVoices = voices.filter(function (v) { return !voiceMgr.isToy(v); });
+    if (realVoices.length) voices = realVoices;
     var pick = voiceMgr.pickVoice(lang);
     var activeUri = pick ? pick.voiceURI : null;
 
@@ -365,6 +419,26 @@
       return '<button type="button" data-kind="' + k.id + '"' + (state.kind === k.id ? ' class="on"' : '') + '>' +
         esc(k.label) + '<b>' + k.count + '</b></button>';
     }).join('');
+  }
+  function renderViewSeg() {
+    var box = $id('view-seg');
+    if (!box) return;
+    box.innerHTML = VIEWS.map(function (v) {
+      return '<button type="button" data-view="' + v.id + '"' + (state.view === v.id ? ' class="on"' : '') + '>' +
+        esc(v.label) + '</button>';
+    }).join('');
+  }
+  /* 总览视图 = 变更宽的一览面（1160px）；卡片视图仍是 620 的卡片列。 */
+  function setView(id) {
+    if (!VIEWS.some(function (v) { return v.id === id; })) return;
+    if (state.view === id) return;
+    state.view = id;
+    try { localStorage.setItem('dc-phonetics-view', id); } catch (e) {}
+    renderViewSeg();
+    renderList();
+    updateStatsText();
+    var s = $id('study-scroll');
+    if (s) s.scrollTop = 0;
   }
 
   /* ==========================================================================
@@ -481,14 +555,166 @@
   }
 
   /* ==========================================================================
+     总览（一览面）
+     --------------------------------------------------------------------------
+     这一版是给**入门**的人看的：每行 5 格、格子大、留白足，一眼看得清。
+     **点一下就发音**，不弹窗 —— 想看这张卡的要领 / 例词 / 常见拼写，
+     切到「卡片」视图慢慢看。
+
+     音标 48 —— 元音 20（单元音 / 双元音）在前，辅音 28 在后。
+       辅音按 **清浊成对** 相邻排：p b / t d / k ɡ / f v / s z / θ ð / ʃ ʒ /
+       tʃ dʒ / ts dz / tr dr —— 一对两格，口型一样、只差声带振不振动；
+       格子里直接写着类别名（清辅音 / 浊辅音 / 鼻音 / 半辅音），不必记颜色。
+     拼读 109 —— 按数据里的 sec 分四段，格子里写「拼写 → 读音」。
+     ========================================================================== */
+  /* 辅音的排列：清浊成对的按 塞音 → 摩擦音 → 破擦音 排，**每两对后面跟一个
+     不成对的音**（m n ŋ h l r j w）。为什么这么绕着排：一行 5 格是奇数，
+     10 对（每对 2 格）直着排总有一对会被行断开；2 对 + 1 单音刚好 5 格，
+     每一对清浊就永远挨在一起。两串都没收的音按原顺序接到队尾，不会凭空消失。 */
+  var CONS_PAIRS = [
+    ['p', 'b'], ['t', 'd'], ['k', 'ɡ'],
+    ['f', 'v'], ['s', 'z'], ['θ', 'ð'], ['ʃ', 'ʒ'],
+    ['tʃ', 'dʒ'], ['ts', 'dz'], ['tr', 'dr']
+  ];
+  var CONS_OTHER = ['m', 'n', 'ŋ', 'h', 'l', 'r', 'j', 'w'];
+  var VOWEL_CATS = ['单元音', '双元音'];
+
+  function chartMarks(card) {
+    var h = '';
+    if (card.is_favorite === 1) h += '<span class="mk fav"><i class="fa-solid fa-bookmark"></i></span>';
+    if (card.is_unknown === 1) h += '<span class="mk star"><i class="fa-solid fa-star"></i></span>';
+    return h;
+  }
+  /* 子块小标题（单元音 / 双元音 / 清浊成对 / 鼻音·半辅音） */
+  function subHead(label, n, hint) {
+    return '<div class="ep-sub">' + esc(label) +
+      '<span class="n">' + n + '</span>' +
+      (hint ? '<span class="hint">' + esc(hint) + '</span>' : '') + '</div>';
+  }
+  /* 音标格：符号（大）+ 类别名（小）；分类色仍走行内 --cat。
+     悬停给出前 3 个例词 —— 想细看切「卡片」视图。 */
+  function ipaCellHtml(card) {
+    var d = card.data || {};
+    var color = IPA_CAT[d.cat] || '#64748b';
+    var ex = (d.ex || []).slice(0, 3).map(function (p) { return p[0]; }).filter(Boolean).join(' / ');
+    return '<button type="button" class="ep-cell ep-ipa' + (card.is_unknown === 1 ? ' is-marked' : '') + '"' +
+      ' style="--cat:' + color + '" data-card-id="' + card.id + '" data-act="cell"' +
+      (ex ? ' data-tooltip="例词 ' + esc(ex) + '"' : '') + '>' +
+      chartMarks(card) + '<span class="s">' + esc(d.sym) + '</span>' +
+      '<span class="c">' + esc(d.cat) + '</span></button>';
+  }
+  /* 拼读格：拼写（大）+ 读音（小）。 */
+  function phCellHtml(card) {
+    var d = card.data || {};
+    var color = PH_SEC[d.sec] || '#64748b';
+    return '<button type="button" class="ep-cell ep-ph' + (card.is_unknown === 1 ? ' is-marked' : '') + '"' +
+      ' style="--cat:' + color + '" data-card-id="' + card.id + '" data-act="cell"' +
+      ' data-tooltip="' + esc('读 ' + stripSlash(d.sound)) + '">' +
+      chartMarks(card) + '<span class="p">' + esc(d.pattern) + '</span>' +
+      '<span class="s">' + esc(d.sound) + '</span></button>';
+  }
+
+  function ipaChartHtml(cards) {
+    var all = cards.filter(function (c) {
+      var d = c.data || {};
+      return d.type !== 'intro' && d.sym != null;
+    });
+    var bySym = {};
+    all.forEach(function (c) { bySym[stripSlash(c.data.sym)] = c; });
+    var used = {};
+    function take(sym) { var c = bySym[sym]; if (c) used[sym] = 1; return c; }
+
+    var h = '';
+    /* --- 元音：单元音 / 双元音 各一块 --- */
+    var vn = all.filter(function (c) { return VOWEL_CATS.indexOf(c.data.cat) >= 0; }).length;
+    h += '<div class="ep-sect">';
+    h += '<div class="ep-sect-h">元音<span class="n">' + vn + '</span>' +
+      '<span class="hint">单元音看长短，双元音是两个音滑过去</span></div>';
+    VOWEL_CATS.forEach(function (cat) {
+      var list = all.filter(function (c) { return c.data.cat === cat; });
+      if (!list.length) return;
+      h += subHead(cat, list.length, cat === '单元音' ? '长短成对' : '前重后轻');
+      h += '<div class="ep-grid">' + list.map(ipaCellHtml).join('') + '</div>';
+    });
+    h += '</div>';
+
+    /* --- 辅音：清浊成对相邻（每两对 + 一个单音 = 一行 5 格） --- */
+    var consAll = all.filter(function (c) { return VOWEL_CATS.indexOf(c.data.cat) < 0; });
+    var seq = [], si = 0;
+    CONS_PAIRS.forEach(function (pair, i) {
+      pair.forEach(function (sym) { var c = take(sym); if (c) seq.push(c); });
+      if (i % 2 === 1 && si < CONS_OTHER.length) {
+        var solo = take(CONS_OTHER[si++]);
+        if (solo) seq.push(solo);
+      }
+    });
+    while (si < CONS_OTHER.length) {
+      var rest = take(CONS_OTHER[si++]);
+      if (rest) seq.push(rest);
+    }
+    consAll.forEach(function (c) { if (!used[stripSlash(c.data.sym)]) seq.push(c); });
+
+    h += '<div class="ep-sect">';
+    h += '<div class="ep-sect-h">辅音<span class="n">' + consAll.length + '</span>' +
+      '<span class="hint">清浊成对紧挨着：左清右浊，口型一样、只差声带振不振动（不成对的鼻音 / 半辅音跟在后面）</span></div>';
+    h += '<div class="ep-grid">' + seq.map(ipaCellHtml).join('') + '</div>';
+    h += '</div>';
+    return h;
+  }
+
+  function phChartHtml(cards) {
+    var secs = [], bySec = {};
+    cards.forEach(function (c) {
+      var d = c.data || {};
+      if (d.type === 'intro') return;
+      var k = d.sec || '其它';
+      if (!bySec[k]) { bySec[k] = []; secs.push(k); }
+      bySec[k].push(c);
+    });
+    var h = '';
+    secs.forEach(function (k) {
+      var list = bySec[k];
+      h += '<div class="ep-sect">';
+      h += '<div class="ep-sect-h">' + esc(k) + '<span class="n">' + list.length + '</span>' +
+        (PH_SEC_EN[k] ? '<span class="hint en">' + esc(PH_SEC_EN[k]) + '</span>' : '') + '</div>';
+      h += '<div class="ep-grid">' + list.map(phCellHtml).join('') + '</div>';
+      h += '</div>';
+    });
+    return h;
+  }
+
+  function renderChart() {
+    var box = $id('study-list');
+    if (!box) return;
+    var cards = currentCards();
+    if (!cards.length) {
+      box.innerHTML = '<div class="empty-state">这一组还没有卡片。</div>';
+      return;
+    }
+    var intro = null;
+    cards.forEach(function (c) { if (!intro && (c.data || {}).type === 'intro') intro = c; });
+    var h = '<div class="ep-chart enter">';
+    if (intro) {
+      var d = intro.data;
+      h += '<div class="ep-lead"><i class="fa-solid fa-circle-info"></i><span>' + esc(d.lead || '') + '</span>' +
+        (d.formula ? '<b>' + esc(d.formula) + '</b>' : '') + '</div>';
+    }
+    h += (state.kind === 'ipa') ? ipaChartHtml(cards) : phChartHtml(cards);
+    h += '<div class="ep-note">点一下直接发音 · 想看要领 / 例词 / 常见拼写，切到「卡片」视图</div>';
+    h += '</div>';
+    box.innerHTML = h;
+  }
+
+  /* ==========================================================================
      渲染
      ========================================================================== */
   function renderList() {
     var box = $id('study-list');
     if (!box) return;
     var content = $('.study-content');
-    if (content) content.classList.toggle('wide', state.singleCardMode);
-    if (state.singleCardMode) { renderSingleCardStage(); return; }
+    /* 一览面要宽（1160px），卡片视图仍是 620 的卡片列 */
+    if (content) content.classList.toggle('chart-wide', state.view === 'chart');
+    if (state.view === 'chart') { renderChart(); return; }
     var cards = currentCards();
     if (!cards.length) {
       box.innerHTML = '<div class="empty-state">这一组还没有卡片。</div>';
@@ -499,73 +725,25 @@
         renderCard(c) + '</div>';
     }).join('');
   }
-  /* 只重画一张卡（标记/收藏后）：别整列表重渲染，否则整屏动画重放、滚动也会抖 */
+  /* 标记 / 收藏之后，把一览面的格子和列表里的卡都刷一遍（只重画这一张 ——
+     整列表重渲染会让动画重放、滚动发抖）。 */
   function patchCard(card) {
+    patchCell(card);
+    if (state.view !== 'card') return;
     var el = document.querySelector('#study-list [data-card-id="' + card.id + '"]');
     if (!el) { renderList(); return; }
     var host = el.parentElement;
     if (host && host.classList.contains('enter')) host.innerHTML = renderCard(card);
     else el.outerHTML = renderCard(card);
   }
-
-  /* ===== 单卡模式（作用域 = 当前这一组） ===== */
-  function toggleSingleCardMode() {
-    state.singleCardMode = !state.singleCardMode;
-    state.singleCardIndex = 0;
-    var btn = $id('card-view-btn');
-    if (btn) btn.classList.toggle('active', state.singleCardMode);
-    renderList();
-  }
-  function exitSingleCardMode() {
-    if (!state.singleCardMode) return;
-    state.singleCardMode = false;
-    var btn = $id('card-view-btn');
-    if (btn) btn.classList.remove('active');
-    renderList();
-  }
-  function renderSingleCardStage() {
-    var box = $id('study-list');
-    if (!box) return;
-    var cards = currentCards();
-    if (!cards.length) {
-      box.innerHTML = '<div class="empty-state">这一组还没有卡片。</div>';
-      return;
-    }
-    var prevSvg = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"/></svg>';
-    var nextSvg = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
-    box.innerHTML =
-      '<div class="single-card-stage">' +
-        '<div class="sc-main"><div class="sc-card-wrap" id="sc-card-wrap"></div></div>' +
-        '<div class="sc-nav-col">' +
-          '<button class="sc-nav sc-prev" data-sc="prev" data-tooltip="上一张" aria-label="上一张">' + prevSvg + '</button>' +
-          '<div class="sc-progress"><span id="sc-idx">1</span> / ' + cards.length + '</div>' +
-          '<button class="sc-nav sc-next" data-sc="next" data-tooltip="下一张" aria-label="下一张">' + nextSvg + '</button>' +
-        '</div>' +
-      '</div>';
-    renderSingleCardContent(state.singleCardIndex, false);
-  }
-  function renderSingleCardContent(idx, animate) {
-    var cards = currentCards();
-    if (!cards.length) return;
-    if (idx < 0) idx = cards.length - 1;
-    if (idx >= cards.length) idx = 0;
-    state.singleCardIndex = idx;
-    var wrap = $id('sc-card-wrap');
-    if (!wrap) return;
-    wrap.innerHTML = renderCard(cards[idx]);
-    var idxEl = $id('sc-idx');
-    if (idxEl) idxEl.textContent = idx + 1;
-    if (animate) {
-      var target = wrap.firstElementChild || wrap;
-      target.classList.remove('sc-anim');
-      void target.offsetWidth;
-      target.classList.add('sc-anim');
-    }
-  }
-  function singleCardNav(delta) {
-    var cards = currentCards();
-    if (!cards.length) return;
-    renderSingleCardContent(state.singleCardIndex + delta, true);
+  /* 格子只更新标记态，不重建 DOM */
+  function patchCell(card) {
+    var el = document.querySelector('#study-list .ep-cell[data-card-id="' + card.id + '"]');
+    if (!el) return;
+    el.classList.toggle('is-marked', card.is_unknown === 1);
+    var old = el.querySelectorAll('.mk');
+    for (var i = 0; i < old.length; i++) old[i].parentNode.removeChild(old[i]);
+    el.insertAdjacentHTML('afterbegin', chartMarks(card));
   }
 
   /* ==========================================================================
@@ -604,8 +782,7 @@
     cardAPI.mark(card.id, want).then(function (d) {
       card.is_unknown = (d && typeof d.is_unknown !== 'undefined') ? d.is_unknown : want;
       cardAPI.track('word_mark', card.id);
-      if (state.singleCardMode) renderSingleCardContent(state.singleCardIndex, false);
-      else patchCard(card);
+      patchCard(card);
       updateStatsText();
     });
   }
@@ -614,8 +791,7 @@
     cardAPI.favorite(card.id, want).then(function (d) {
       card.is_favorite = (d && typeof d.is_favorite !== 'undefined') ? d.is_favorite : want;
       cardAPI.track('favorite_toggle', card.id);
-      if (state.singleCardMode) renderSingleCardContent(state.singleCardIndex, false);
-      else patchCard(card);
+      patchCard(card);
     });
   }
 
@@ -624,6 +800,16 @@
     document.addEventListener('click', function (e) {
       var target = e.target;
       if (!target || typeof target.closest !== 'function') return;
+
+      /* 一览面的格子（先判：格子里面还有 .s / .mk 等子节点）-> **直接发音**。
+         想看这张卡的完整内容（要领 / 例词 / 常见拼写）请切到「卡片」视图。 */
+      var cell = target.closest('.ep-cell[data-act="cell"]');
+      if (cell) {
+        e.stopPropagation();
+        var cellCard = findCard(cell.dataset.cardId);
+        if (cellCard) handlePlaySound(cellCard, cell);
+        return;
+      }
 
       /* 例词胶囊（先于 data-action 判，胶囊上没有 data-action） */
       var chip = target.closest('[data-word]');
@@ -649,9 +835,10 @@
         }
         return;
       }
-      /* 单卡导航 */
-      if (target.closest('[data-sc="prev"]')) { singleCardNav(-1); return; }
-      if (target.closest('[data-sc="next"]')) { singleCardNav(1); return; }
+
+      /* 总览 / 卡片 */
+      var viewBtn = target.closest('#view-seg button');
+      if (viewBtn) { setView(viewBtn.dataset.view); return; }
 
       /* 音标 / 拼读 切换 */
       var kindBtn = target.closest('#kind-seg button');
@@ -734,9 +921,6 @@
         return;
       }
 
-      /* 单卡开关 */
-      if (target.closest('#card-view-btn')) { toggleSingleCardMode(); return; }
-
       /* 滚动 */
       if (target.closest('#scroll-top-btn')) { $id('study-scroll').scrollTo({ top: 0, behavior: 'smooth' }); return; }
       if (target.closest('#scroll-bottom-btn')) {
@@ -759,22 +943,12 @@
         if (fd) fd.style.display = 'none';
       }
     });
-
-    /* 键盘：单卡模式下 ←/→/空格 翻卡，Esc 退出 */
-    document.addEventListener('keydown', function (e) {
-      if (!state.singleCardMode) return;
-      if (e.key === 'ArrowLeft') { e.preventDefault(); singleCardNav(-1); }
-      else if (e.key === 'ArrowRight') { e.preventDefault(); singleCardNav(1); }
-      else if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); singleCardNav(1); }
-      else if (e.key === 'Escape') { e.preventDefault(); exitSingleCardMode(); }
-    });
   }
 
   function selectKind(id) {
     if (!KINDS.some(function (k) { return k.id === id; })) return;
     if (state.kind === id) return;
     state.kind = id;
-    state.singleCardIndex = 0;
     try { localStorage.setItem('dc-phonetics-kind', id); } catch (e) {}
     renderKindSeg();
     renderList();
@@ -796,10 +970,12 @@
     var title = $id('study-deck-title');
     if (title) title.textContent = TITLE;
 
+    renderViewSeg();
     renderKindSeg();
     renderList();
 
     loadAll().then(function () {
+      renderViewSeg();
       renderKindSeg();
       renderList();
       updateStatsText();
