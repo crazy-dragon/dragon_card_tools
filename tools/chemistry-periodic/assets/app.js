@@ -169,15 +169,56 @@
       }
     },
     _primary: function (tag) { return String(tag || '').split('-')[0].toLowerCase(); },
+    /* 「变声玩具」判据：同一个基名被注册到 ≥2 个主语言下。
+       macOS 把 Eddy / Grandma / Sandy … 这 8 个 novelty 角色铺到 10 个语言，
+       实测它们在 zh / ja / ko 下共用同一段基础语音、只换变调：
+         zh — 16 个音色只有 3 种字节长度，彼此包络相关 0.82–0.99，与真音色负相关 −0.26
+         ja — 8 个音色字节数完全相同（185064）
+         ko — 8 个音色 194538–194550
+       真音色（Tingting / Meijia / Kyoko / Yuna …）只在单一语言下注册，不会误伤。
+       只在 _toyHideLangs 里实测过的语系生效：英文的 novelty 是 coca20000 的现役
+       音色，未实测，不动。 */
+    _voiceBase: function (name) { return String(name || '').replace(/\s*\(.*\)\s*$/, '').trim(); },
+    _toyHideLangs: ['zh', 'ja', 'ko'],
+    toySet: function () {
+      if (this._toyCache && this._toyFor === this.voices) return this._toyCache;
+      var langsOf = {}, self = this;
+      (this.voices || []).forEach(function (v) {
+        var b = self._voiceBase(v.name);
+        if (!langsOf[b]) langsOf[b] = {};
+        langsOf[b][self._primary(v.lang)] = 1;
+      });
+      var set = {};
+      Object.keys(langsOf).forEach(function (b) {
+        if (Object.keys(langsOf[b]).length >= 2) set[b] = 1;
+      });
+      this._toyCache = set;
+      this._toyFor = this.voices;
+      return set;
+    },
+    isToy: function (v) {
+      if (this._toyHideLangs.indexOf(this._primary(v.lang)) < 0) return false;
+      return !!this.toySet()[this._voiceBase(v.name)];
+    },
     pickVoice: function (lang) {
       if (!lang) return null;
       var primary = this._primary(lang);
       var saved = null;
       try { saved = localStorage.getItem('dc-voice-' + primary); } catch (e) {}
+      /* 用户显式选过就用它（音色可能已被系统删掉 ⇒ 忽略、继续往下挑）。
+         必须放在循环外：塞进循环里的话「精确 lang 命中」会先 return，
+         而中文音色表第一个就是 zh-CN，用户每次改音色都会被它抢先。 */
+      if (saved) {
+        for (var j = 0; j < this.voices.length; j++) {
+          /* 玩具音色（见 isToy）不算用户的有效选择：中文下默认要落到 Tingting，
+             而不是音色表第一个 zh-CN 的 Eddy */
+          if (this.voices[j].voiceURI === saved && !this.isToy(this.voices[j])) return this.voices[j];
+        }
+      }
       var fallback = null;
       for (var i = 0; i < this.voices.length; i++) {
         var v = this.voices[i];
-        if (saved && v.voiceURI === saved) return v;
+        if (this.isToy(v)) continue;   /* 玩具不参与自动挑选 */
         if (!fallback && this._primary(v.lang) === primary) fallback = v;
         if (v.lang && v.lang.toLowerCase() === String(lang).toLowerCase()) return v;
       }
@@ -216,6 +257,9 @@
     list.innerHTML = '';
     var lang = voiceMgr._primary(VOICE_LANG);
     var voices = voiceMgr.voices.filter(function (v) { return voiceMgr._primary(v.lang) === lang; });
+    /* 隐藏「变声玩具」音色；若该语言下全是玩具（理论上不会）就退回完整列表，免得下拉空掉 */
+    var realVoices = voices.filter(function (v) { return !voiceMgr.isToy(v); });
+    if (realVoices.length) voices = realVoices;
     var pick = voiceMgr.pickVoice(VOICE_LANG);
     var activeUri = pick ? pick.voiceURI : null;
 

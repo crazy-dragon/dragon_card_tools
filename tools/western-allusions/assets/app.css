@@ -208,7 +208,13 @@ html.skin-glass .study-top-bar { backdrop-filter: blur(18px) saturate(150%); }
     width: 100%;
     max-width: 660px;          /* 660 − 左右各 20 padding = 卡片列 620（P4） */
     margin: 0 auto;
-    flex: 1;
+    /* ⚠️ 必须 `flex: 1 0 auto`，不能写 `flex: 1`：`flex: 1` 展开是 `1 1 0%`，
+       flex-shrink 默认 1 ⇒ 内容比滚动容器高时本元素被压成容器高，而子元素
+       （#study-list，`flex: 1 0 auto`）拒绝压缩 ⇒ 内容整块溢出，这里的
+       padding-bottom 被整个吃掉，滚到底时最后一行紧贴视口底。
+       shrink 改 0 后：内容高时按内容高撑开（24px 下内边距生效），内容矮时
+       flex-grow 仍撑满容器（单卡模式垂直居中靠它）。2026-09-29 实测修复。 */
+    flex: 1 0 auto;
     min-height: 0;
     padding: 24px 20px;
     display: flex;
