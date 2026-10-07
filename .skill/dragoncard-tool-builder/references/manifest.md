@@ -27,13 +27,6 @@
 | 字段 | 说明 |
 |---|---|
 | `cardsJson` | 卡组数据源（相对 `dragoncard_tools/` 的路径）⇒ 打包时产出 `dist/<name>.cards.json`，即用户导入的那份 |
-| `freeDeck` | `true` ⇒ 打包后把 `tool.zip` + `cards.json` 同步进 `free_decks/<name>/`（**免费卡组的交付包**） |
-
-> **免费卡组只住 `dragoncard_tools/free_decks/<name>/`，不进主工程 `dragoncard/default_cards/`** ——
-> 主工程是主程序，往里加卡组意味着每个卡组都要改动它，而多数用户并不需要这些卡组。
-> 交付包五件套：`tool.zip` + `cards.json`（build 同步，内容没变就不碰时间戳）+ `meta.json` /
-> `readme.txt` / `LICENSE`（人工撰写，**build 永不覆盖**，缺了只告警）。`DC_NO_AUDIO=1` 的降级包不同步。
-> 完整约定见 `TOOL_PACK.md` 的「免费卡组交付包」节。
 
 ## 要点
 

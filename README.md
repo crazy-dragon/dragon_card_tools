@@ -20,7 +20,6 @@ dragoncard_tools/
 ├── build.py                 # packager: walk tools/ → dist/<name>.zip (+ cards.json)
 ├── tools/<name>/            # tool sources (one dir per tool: index.html + manifest.json + assets/)
 ├── dist/                    # build output for upload/install (generated, git-ignored)
-├── free_decks/<name>/       # free-deck delivery bundles (tool.zip + cards.json + hand-written meta/readme/LICENSE)
 ├── TOOL_PACK.md             # packaging spec (English; 中文版 TOOL_PACK.zh.md)
 └── .skill/dragoncard-tool-builder/   # AI/developer guide (references: manifest, cardAPI, skins, vendor…)
 ```
@@ -41,7 +40,7 @@ See [TOOL_PACK.md](TOOL_PACK.md) for the full flow.
 ## Key conventions
 
 - **manifest.json** — `name` / `description` / `lang` / `icon` / `fields` / `trackedActions`
-  (≤5). Optional build fields: `cardsJson`, `freeDeck`. See `.skill/.../references/manifest.md`.
+  (≤5). Optional build field: `cardsJson`. See `.skill/.../references/manifest.md`.
 - **Analytics** — item actions must call `cardAPI.track(action, itemId)`; without
   `itemId` the server drops the event.
 - **Purity** — a tool is pure H5: unzip and run. `build.py` excludes scripts, caches
@@ -52,7 +51,7 @@ See [TOOL_PACK.md](TOOL_PACK.md) for the full flow.
 
 | Doc | What |
 |---|---|
-| [TOOL_PACK.md](TOOL_PACK.md) (English) · [TOOL_PACK.zh.md](TOOL_PACK.zh.md) (中文) | Packaging spec: manifest, `window.cardAPI`, storage, vendor libs, free decks |
+| [TOOL_PACK.md](TOOL_PACK.md) (English) · [TOOL_PACK.zh.md](TOOL_PACK.zh.md) (中文) | Packaging spec: manifest, `window.cardAPI`, storage, vendor libs |
 | [.skill/dragoncard-tool-builder/SKILL.md](.skill/dragoncard-tool-builder/SKILL.md) | Step-by-step build guide for AI/developers |
 
 ## Notes

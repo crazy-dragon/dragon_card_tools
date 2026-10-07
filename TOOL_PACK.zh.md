@@ -124,8 +124,6 @@ dragoncard_tools/
 │   ├── ipa-cards/ phonics-cards/ voyage-log/   # 其它工具
 │   └── ...
 ├── dist/                    # 打包产物（上传安装用）
-└── free_decks/              # 免费卡组交付包（见下节）
-    └── laozi/{cards.json, tool.zip, meta.json, readme.txt, LICENSE}
 ```
 
 ```bash
@@ -137,24 +135,3 @@ python3 build.py --lang zh  # 控制台语言：en（默认）/ zh
 
 开发规范见 `.skill/dragoncard-tool-builder/`（AI/开发者指南）。
 
-## 免费卡组交付包：free_decks/
-
-**免费卡组只住在这里，不进主工程 `dragoncard/`。** 主工程是主程序，往里加卡组意味着
-每个卡组都要改动它；而这些卡组多数用户并不需要。所以约定：
-
-- 免费卡组的交付包 = `free_decks/<name>/`，五件套：
-  | 文件 | 谁生成 |
-  |---|---|
-  | `tool.zip` | **build.py 同步**（= `dist/<name>.zip` 逐字节相同） |
-  | `cards.json` | **build.py 同步**（= `dist/<name>.cards.json`，即 manifest 里 `cardsJson` 那一份） |
-  | `meta.json` | 人工撰写（名称/来源/许可/计数） |
-  | `readme.txt` | 人工撰写（中英双语，给拿到卡组的人看） |
-  | `LICENSE` | 人工撰写 |
-- 开启方式：工具 `manifest.json` 里加 `"freeDeck": true`。之后每次
-  `python3 build.py <name>` 都会顺手把两个**可再生产物**同步过去 ——
-  内容没变就不碰文件（时间戳稳定），人工那三个文件**永不覆盖**，缺了会提示。
-- 交付给用户就是三步：导入 `cards.json` 建卡组 → 卡组详情里上传 `tool.zip` 绑定 → 开始学。
-- `DC_NO_AUDIO=1` 的降级包**不会**同步进 `free_decks/`（避免把缺音频的 zip 当正式包发出去）。
-
-> 为什么不再放 `dragoncard/default_cards/`：那里是随主程序分发的内置卡组。
-> 免费卡组走独立工程交付，主程序保持干净。

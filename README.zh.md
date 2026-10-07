@@ -19,7 +19,6 @@ dragoncard_tools/
 ├── build.py                 # 打包器：遍历 tools/ → dist/<name>.zip（并产出 cards.json）
 ├── tools/<name>/            # 工具源码（每工具一目录：index.html + manifest.json + assets/）
 ├── dist/                    # 打包产物（上传安装用，可再生、已忽略）
-├── free_decks/<name>/       # 免费卡组交付包（tool.zip + cards.json + 人工 meta/readme/LICENSE）
 ├── TOOL_PACK.zh.md          # 打包规范（中文；英文主版 TOOL_PACK.md）
 └── .skill/dragoncard-tool-builder/   # AI/开发者指南（references：manifest、cardAPI、skins、vendor…）
 ```
@@ -40,7 +39,7 @@ DC_NO_AUDIO=1 python3 build.py english-phonetics   # 不带第三方音频的公
 ## 关键约定
 
 - **manifest.json** —— `name` / `description` / `lang` / `icon` / `fields` / `trackedActions`
-  （≤5）。可选构建字段：`cardsJson`、`freeDeck`。详见 `.skill/.../references/manifest.md`。
+  （≤5）。可选构建字段：`cardsJson`。详见 `.skill/.../references/manifest.md`。
 - **埋点** —— 卡项操作必须 `cardAPI.track(action, itemId)`；缺 `itemId` 服务端会丢弃。
 - **纯净** —— 工具是纯 H5：解压即用。`build.py` 会把脚本、缓存、系统垃圾挡在包外。
 - **i18n** —— 控制台输出默认英文，可切中文。
@@ -49,7 +48,7 @@ DC_NO_AUDIO=1 python3 build.py english-phonetics   # 不带第三方音频的公
 
 | 文档 | 内容 |
 |---|---|
-| [TOOL_PACK.zh.md](TOOL_PACK.zh.md)（中文）· [TOOL_PACK.md](TOOL_PACK.md)（English 主版） | 打包规范：manifest、`window.cardAPI`、存储、预置库、免费卡组 |
+| [TOOL_PACK.zh.md](TOOL_PACK.zh.md)（中文）· [TOOL_PACK.md](TOOL_PACK.md)（English 主版） | 打包规范：manifest、`window.cardAPI`、存储、预置库 |
 | [.skill/dragoncard-tool-builder/SKILL.md](.skill/dragoncard-tool-builder/SKILL.md) | 分步开发指南（AI/开发者） |
 
 ## 说明

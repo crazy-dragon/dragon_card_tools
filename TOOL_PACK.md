@@ -137,8 +137,6 @@ dragoncard_tools/
 │   ├── ipa-cards/ phonics-cards/ voyage-log/   # other tools
 │   └── ...
 ├── dist/                    # build output (for upload/install)
-└── free_decks/              # free-deck delivery bundles (see below)
-    └── laozi/{cards.json, tool.zip, meta.json, readme.txt, LICENSE}
 ```
 
 ```bash
@@ -150,30 +148,3 @@ python3 build.py --lang zh  # console language: en (default) | zh
 
 Development guide: `.skill/dragoncard-tool-builder/` (AI/developer guide).
 
-## Free-deck delivery bundle: free_decks/
-
-**Free decks live only here — never in the main `dragoncard/` project.** The main
-project is the host program; adding a deck there means touching it for every deck,
-while most users do not need these decks. Hence the convention:
-
-- A free-deck bundle = `free_decks/<name>/`, a five-piece set:
-  | File | Produced by |
-  |---|---|
-  | `tool.zip` | **synced by build.py** (byte-identical to `dist/<name>.zip`) |
-  | `cards.json` | **synced by build.py** (= `dist/<name>.cards.json`, the one named by `cardsJson` in the manifest) |
-  | `meta.json` | hand-written (name/source/license/counts) |
-  | `readme.txt` | hand-written (bilingual, for whoever receives the deck) |
-  | `LICENSE` | hand-written |
-- Enable with `"freeDeck": true` in the tool's `manifest.json`. After that, every
-  `python3 build.py <name>` also syncs the two **reproducible** artifacts across —
-  and when the content is unchanged the files are left untouched (stable timestamps).
-  The three hand-written files are **never overwritten**; build only warns when one
-  is missing.
-- Handing it to a user is three steps: import `cards.json` to create the deck →
-  upload `tool.zip` in the deck detail to bind it → start learning.
-- Degraded builds from `DC_NO_AUDIO=1` are **not** synced into `free_decks/` (so a
-  zip missing its audio is never shipped as the official package).
-
-> Why not put these back into `dragoncard/default_cards/`: that location is for
-> built-in decks distributed with the host program. Free decks ship via this separate
-> project so the host program stays clean.

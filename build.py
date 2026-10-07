@@ -28,16 +28,6 @@ third-party recordings):
   When audio is missing the tool degrades to "read the first example word + hint"
   instead of failing silently (verified).
 
-Free-deck delivery bundle (optional; add "freeDeck": true to the manifest):
-  after packing, the two *reproducible* artifacts are synced into
-  free_decks/<name>/ — tool.zip + cards.json, byte-identical to dist/ (timestamps
-  are left alone when the content is unchanged).
-  That directory also holds three *hand-written* files: meta.json / readme.txt /
-  LICENSE, which build never touches (it only warns when one is missing). So a
-  free-deck bundle is complete after a single build — and it stays fully decoupled
-  from the main dragoncard/ project (free decks do not go into default_cards/, so
-  the main project does not churn for every deck and most users do not need them).
-
 Cards-data sidecar:
   add an optional "cardsJson": "../memory_market_goods/xxx/cards.json" to
   manifest.json (relative to this directory) and the build also emits
@@ -78,11 +68,6 @@ MSG = {
         'excluded_junk': '    \u00b7 excluded %d non-deliverable file(s): %s',
         'cards_err': '    \u2717 cards data: %s',
         'cards_ok': '    \u2713 cards data -> %s (%d item(s))',
-        'freedeck_noaudio': '    \u00b7 free deck: DC_NO_AUDIO=1 (degraded build), not syncing free_decks/',
-        'freedeck_updated': '(updated %s)',
-        'freedeck_uptodate': '(already up to date)',
-        'freedeck_missing': '  \u26a0 missing hand-written file(s): %s',
-        'freedeck_ok': '    \u2713 free deck -> %s %s',
         'done': '\nDone, packaged %d tool(s).',
         'noaudio_suffix': ' (no audio)',
         'err_no_manifest': 'missing manifest.json',
@@ -101,11 +86,6 @@ MSG = {
         'excluded_junk': '    \u00b7 已排除 %d 个非交付文件：%s',
         'cards_err': '    \u2717 卡组数据：%s',
         'cards_ok': '    \u2713 卡组数据 -> %s（%d 张）',
-        'freedeck_noaudio': '    \u00b7 免费卡组：DC_NO_AUDIO=1（降级包），本次不同步 free_decks/',
-        'freedeck_updated': '（更新 %s）',
-        'freedeck_uptodate': '（已是最新）',
-        'freedeck_missing': '  \u26a0 缺人工文件：%s',
-        'freedeck_ok': '    \u2713 免费卡组 -> %s %s',
         'done': '\n完成，打包 %d 个工具。',
         'noaudio_suffix': '（不含音频）',
         'err_no_manifest': '缺少 manifest.json',
@@ -261,36 +241,6 @@ def build_tool(tool_dir):
     return title + (t('noaudio_suffix') if NO_AUDIO else ''), zip_path, skipped, sorted(junk)
 
 
-# ---------- 免费卡组交付包 ----------
-# 交付目录与主工程 dragoncard/ 解耦：免费卡组不再塞进 default_cards/，
-# 否则主工程要为每个卡组频繁改动，而多数用户并不需要这些卡组。
-FREE_DECKS = os.path.join(HERE, 'free_decks')
-# 这三个是人工撰写的，build 绝不覆盖（缺了只提示）
-FREE_KEEP = ('meta.json', 'readme.txt', 'LICENSE')
-
-
-def sync_free_deck(safe, zip_path, cards_path):
-    """把 dist 产物同步进 free_decks/<safe>/，返回 (目录, 实际写入的文件名列表)。
-    只搬可再生产物 tool.zip / cards.json；内容逐字节相同就不动（保持时间戳稳定）。"""
-    dest = os.path.join(FREE_DECKS, safe)
-    os.makedirs(dest, exist_ok=True)
-    wrote = []
-    for src, name in ((zip_path, 'tool.zip'), (cards_path, 'cards.json')):
-        if not src or not os.path.isfile(src):
-            continue
-        with open(src, 'rb') as f:
-            blob = f.read()
-        target = os.path.join(dest, name)
-        if os.path.isfile(target):
-            with open(target, 'rb') as f:
-                if f.read() == blob:
-                    continue
-        with open(target, 'wb') as f:
-            f.write(blob)
-        wrote.append(name)
-    return dest, wrote
-
-
 def main():
     global _lang
     _lang, targets = parse_lang(sys.argv[1:])
@@ -307,7 +257,6 @@ def main():
                 manifest = json.load(f)
         except Exception:
             manifest = {}
-        zip_path = None
         res = build_tool(d)
         if res[0] is None:
             print(t('zip_err') % (entry, res[1]))
@@ -328,16 +277,6 @@ def main():
             with open(cards_path, encoding='utf-8') as f:
                 n = len(json.load(f))
             print(t('cards_ok') % (os.path.relpath(cards_path, HERE), n))
-        if manifest.get('freeDeck'):
-            if NO_AUDIO:
-                print(t('freedeck_noaudio'))
-            else:
-                dest, wrote = sync_free_deck(safe, zip_path, cards_path)
-                note = (t('freedeck_updated') % ', '.join(wrote)) if wrote else t('freedeck_uptodate')
-                missing = [n for n in FREE_KEEP if not os.path.isfile(os.path.join(dest, n))]
-                if missing:
-                    note += t('freedeck_missing') % ', '.join(missing)
-                print(t('freedeck_ok') % (os.path.relpath(dest, HERE) + '/', note))
     print(t('done') % built)
     return 0 if built else 1
 
